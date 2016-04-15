@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal" >
+	
+    <ImageView
+        android:id="@+id/filephoto_imgview"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/uz_media_scanner_imgbg" 
+        android:layout_marginLeft="10dp"
+        android:background="#66CDC9C9"
+        android:layout_margin="5dp"
+        android:scaleType="centerCrop"
+        />
+    
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="10dp"
+        android:layout_centerVertical="true"
+        android:layout_toRightOf="@id/filephoto_imgview"
+        >
+        
+        <TextView
+	        android:id="@+id/filename_textview"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:text="文件名称"
+	        android:textColor="@android:color/black"
+	        android:textAppearance="?android:attr/textAppearanceMedium"
+        	/>
+        
+        <TextView
+	        android:id="@+id/filecount_textview"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:text="几张"
+	        android:textSize="16dp"
+	        android:textColor="#8B7D7B"
+	        android:layout_marginLeft="10dp"
+       		/>
+        
+    </LinearLayout>
+    
+    
+    <ImageView 
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_alignParentRight="true"
+        android:src="@drawable/item_arrow_indicator"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="20dp"
+        />
+    
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1px"
+        android:background="#99ADADAD"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="10dp"
+        android:layout_alignParentBottom="true"
+        />
+    
+</RelativeLayout>

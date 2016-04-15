@@ -1,0 +1,298 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03932F991B9D953000E30AB9 /* UZUIAssetsViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 03932F981B9D953000E30AB9 /* UZUIAssetsViewCell.m */; };
+		71B53F3D1B450C200048E8B9 /* UZUIMediaScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 71B53F381B450C200048E8B9 /* UZUIMediaScanner.m */; };
+		71B53F3F1B450C200048E8B9 /* UZUIAssetsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 71B53F3C1B450C200048E8B9 /* UZUIAssetsViewController.m */; };
+		71E10B6B1BAA7095003DB24C /* UZUIAssetsGroupViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 71E10B6A1BAA7095003DB24C /* UZUIAssetsGroupViewController.m */; };
+		B58C1B3F1CBCF2E800174447 /* UZUIAssetNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = B58C1B3E1CBCF2E800174447 /* UZUIAssetNavigationController.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		71DE68291B44CF33001F7DA0 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		03932F881B9D7DFF00E30AB9 /* NSDictionaryUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSDictionaryUtils.h; sourceTree = "<group>"; };
+		03932F891B9D7DFF00E30AB9 /* UZAppUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZAppUtils.h; sourceTree = "<group>"; };
+		03932F8A1B9D7DFF00E30AB9 /* UZModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZModule.h; sourceTree = "<group>"; };
+		03932F971B9D953000E30AB9 /* UZUIAssetsViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZUIAssetsViewCell.h; sourceTree = "<group>"; };
+		03932F981B9D953000E30AB9 /* UZUIAssetsViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UZUIAssetsViewCell.m; sourceTree = "<group>"; };
+		71B53F371B450C200048E8B9 /* UZUIMediaScanner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZUIMediaScanner.h; sourceTree = "<group>"; };
+		71B53F381B450C200048E8B9 /* UZUIMediaScanner.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UZUIMediaScanner.m; sourceTree = "<group>"; };
+		71B53F3B1B450C200048E8B9 /* UZUIAssetsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZUIAssetsViewController.h; sourceTree = "<group>"; };
+		71B53F3C1B450C200048E8B9 /* UZUIAssetsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UZUIAssetsViewController.m; sourceTree = "<group>"; };
+		71DE682B1B44CF33001F7DA0 /* libUZUIMediaScanner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libUZUIMediaScanner.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		71E10B691BAA7095003DB24C /* UZUIAssetsGroupViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZUIAssetsGroupViewController.h; sourceTree = "<group>"; };
+		71E10B6A1BAA7095003DB24C /* UZUIAssetsGroupViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UZUIAssetsGroupViewController.m; sourceTree = "<group>"; };
+		B58C1B3D1CBCF2E800174447 /* UZUIAssetNavigationController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZUIAssetNavigationController.h; sourceTree = "<group>"; };
+		B58C1B3E1CBCF2E800174447 /* UZUIAssetNavigationController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UZUIAssetNavigationController.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		71DE68281B44CF33001F7DA0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		03932F871B9D7DFF00E30AB9 /* headFile */ = {
+			isa = PBXGroup;
+			children = (
+				03932F881B9D7DFF00E30AB9 /* NSDictionaryUtils.h */,
+				03932F891B9D7DFF00E30AB9 /* UZAppUtils.h */,
+				03932F8A1B9D7DFF00E30AB9 /* UZModule.h */,
+			);
+			path = headFile;
+			sourceTree = "<group>";
+		};
+		71DE68221B44CF33001F7DA0 = {
+			isa = PBXGroup;
+			children = (
+				03932F871B9D7DFF00E30AB9 /* headFile */,
+				71DE682D1B44CF33001F7DA0 /* UZUIMediaScanner */,
+				71DE682C1B44CF33001F7DA0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		71DE682C1B44CF33001F7DA0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				71DE682B1B44CF33001F7DA0 /* libUZUIMediaScanner.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		71DE682D1B44CF33001F7DA0 /* UZUIMediaScanner */ = {
+			isa = PBXGroup;
+			children = (
+				71B53F371B450C200048E8B9 /* UZUIMediaScanner.h */,
+				71B53F381B450C200048E8B9 /* UZUIMediaScanner.m */,
+				B58C1B3D1CBCF2E800174447 /* UZUIAssetNavigationController.h */,
+				B58C1B3E1CBCF2E800174447 /* UZUIAssetNavigationController.m */,
+				03932F971B9D953000E30AB9 /* UZUIAssetsViewCell.h */,
+				03932F981B9D953000E30AB9 /* UZUIAssetsViewCell.m */,
+				71B53F3B1B450C200048E8B9 /* UZUIAssetsViewController.h */,
+				71B53F3C1B450C200048E8B9 /* UZUIAssetsViewController.m */,
+				71E10B691BAA7095003DB24C /* UZUIAssetsGroupViewController.h */,
+				71E10B6A1BAA7095003DB24C /* UZUIAssetsGroupViewController.m */,
+			);
+			path = UZUIMediaScanner;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		71DE682A1B44CF33001F7DA0 /* UZUIMediaScanner */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 71DE683F1B44CF33001F7DA0 /* Build configuration list for PBXNativeTarget "UZUIMediaScanner" */;
+			buildPhases = (
+				71DE68271B44CF33001F7DA0 /* Sources */,
+				71DE68281B44CF33001F7DA0 /* Frameworks */,
+				71DE68291B44CF33001F7DA0 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UZUIMediaScanner;
+			productName = UZUIMediaScanner;
+			productReference = 71DE682B1B44CF33001F7DA0 /* libUZUIMediaScanner.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		71DE68231B44CF33001F7DA0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0630;
+				ORGANIZATIONNAME = apicloud;
+				TargetAttributes = {
+					71DE682A1B44CF33001F7DA0 = {
+						CreatedOnToolsVersion = 6.3.2;
+					};
+				};
+			};
+			buildConfigurationList = 71DE68261B44CF33001F7DA0 /* Build configuration list for PBXProject "UZUIMediaScanner" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 71DE68221B44CF33001F7DA0;
+			productRefGroup = 71DE682C1B44CF33001F7DA0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				71DE682A1B44CF33001F7DA0 /* UZUIMediaScanner */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		71DE68271B44CF33001F7DA0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				71B53F3D1B450C200048E8B9 /* UZUIMediaScanner.m in Sources */,
+				71B53F3F1B450C200048E8B9 /* UZUIAssetsViewController.m in Sources */,
+				71E10B6B1BAA7095003DB24C /* UZUIAssetsGroupViewController.m in Sources */,
+				B58C1B3F1CBCF2E800174447 /* UZUIAssetNavigationController.m in Sources */,
+				03932F991B9D953000E30AB9 /* UZUIAssetsViewCell.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		71DE683D1B44CF33001F7DA0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		71DE683E1B44CF33001F7DA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		71DE68401B44CF33001F7DA0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					armv7s,
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		71DE68411B44CF33001F7DA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					armv7s,
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		71DE68261B44CF33001F7DA0 /* Build configuration list for PBXProject "UZUIMediaScanner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				71DE683D1B44CF33001F7DA0 /* Debug */,
+				71DE683E1B44CF33001F7DA0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		71DE683F1B44CF33001F7DA0 /* Build configuration list for PBXNativeTarget "UZUIMediaScanner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				71DE68401B44CF33001F7DA0 /* Debug */,
+				71DE68411B44CF33001F7DA0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 71DE68231B44CF33001F7DA0 /* Project object */;
+}

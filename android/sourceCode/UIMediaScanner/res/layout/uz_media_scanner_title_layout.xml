@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:id="@+id/title_layout"
+    >
+    
+    <TextView
+            android:id="@+id/button1"
+            android:layout_marginLeft="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_alignParentLeft="true"
+            android:src="@drawable/uz_media_scanner_back_icon"
+            android:onClick="sendfiles"
+            android:padding="5dp"
+            android:clickable="true"
+            />
+    
+    <TextView 
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:id="@+id/navi_title"
+        android:layout_centerInParent="true"
+        />
+
+     <TextView
+            android:id="@+id/button2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginRight="10dp"
+         	android:src="@drawable/uz_media_scanner_ok_icon"
+            android:onClick="tobreak"
+            android:padding="5dp"
+            android:clickable="true"
+           />
+     
+</RelativeLayout>

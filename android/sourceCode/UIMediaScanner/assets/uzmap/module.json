@@ -1,0 +1,8 @@
+{
+	modules:[
+		{
+		   name:'UIMediaScanner',
+		   class:'com.uzmap.pkg.uzmodules.UIMediaScanner.UIMediaScanner'
+		}
+	]
+}
