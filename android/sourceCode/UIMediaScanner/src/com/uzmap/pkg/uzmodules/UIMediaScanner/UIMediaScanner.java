@@ -25,8 +25,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.ThumbnailUtils;
-import android.os.Environment;
 import android.text.TextUtils;
 
 import android.view.WindowManager;
@@ -51,6 +49,7 @@ public class UIMediaScanner extends UZModule {
 
 	public UIMediaScanner(UZWebView webView) {
 		super(webView);
+		CACHE_PATH = mContext.getCacheDir().getAbsolutePath();
 	}
 
 	@UzJavascriptMethod
@@ -216,10 +215,23 @@ public class UIMediaScanner extends UZModule {
 	private ArrayList<FileInfo> allScanFileList;
 	private int startIndex = -1;
 	private int fetchCount = -1;
+	
+	public int thumbWidth = 100;
+	public int thumbHeight = 100;
 
 	@UzJavascriptMethod
 	public void jsmethod_scan(final UZModuleContext moduleConztext) {
-
+		
+		JSONObject thumbnailObj = moduleConztext.optJSONObject("thumbnail");
+		if(thumbnailObj != null){
+			if(!thumbnailObj.isNull("w")){
+				thumbWidth = thumbnailObj.optInt("w");
+			}
+			if(!thumbnailObj.isNull("h")){
+				thumbHeight = thumbnailObj.optInt("h");
+			}
+		}
+		
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -308,8 +320,8 @@ public class UIMediaScanner extends UZModule {
 					subList = allScanFileList.subList(0, count);
 					startIndex = count;
 				}
-				moduleConztext.success(creatRetJSON(subList, true), true);
-
+				moduleConztext.success(creatRetJSON(subList, true, thumbWidth, thumbHeight), true);
+				
 			}
 		}).start();
 	}
@@ -357,7 +369,7 @@ public class UIMediaScanner extends UZModule {
 					return;
 				}
 
-				moduleConztext.success(creatRetJSON(subListFileInfo, false), true);
+				moduleConztext.success(creatRetJSON(subListFileInfo, false, thumbWidth, thumbHeight), true);
 			}
 		}).start();
 
@@ -380,24 +392,26 @@ public class UIMediaScanner extends UZModule {
 	}
 
 	// create thumbnail image
-	public static final String SDCARD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-	public static final String THUMBNAIL_SAVE_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/.thumbnails_for_me";
+	// public static final String SDCARD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
+	// public static final String THUMBNAIL_SAVE_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/thumbnails_for_me";
 
-	public String createThumbPath(String orgPath) {
+	public static String CACHE_PATH;
+	
+	public String createThumbPath(String orgPath, int width, int height) {
 
 		int degree = BitmapToolkit.readPictureDegree(orgPath);
-		Bitmap srcBitmap = BitmapFactory.decodeFile(orgPath);
-
-		if (srcBitmap == null) {
-			return null;
-		}
-
-		Bitmap createdBitmap = ThumbnailUtils.extractThumbnail(srcBitmap, 157, 157);
+		
+// 		Bitmap srcBitmap = BitmapFactory.decodeFile(orgPath);
+//		if (srcBitmap == null) {
+//			return null;
+//		}
+		
+		Bitmap createdBitmap = Util.decodeSampledBitmapFromFile(orgPath, width, height);// ThumbnailUtils.extractThumbnail(srcBitmap, width, height);
 		if (degree != 0) {
 			createdBitmap = BitmapToolkit.rotaingImageView(degree, createdBitmap);
 		}
 
-		String realPathStr = SDCARD_PATH + "/DCIM/.thumbnails_for_me";
+		String realPathStr = CACHE_PATH + "/thumbnails_for_me";
 		File realPath = new File(realPathStr);
 		if (!realPath.exists()) {
 			realPath.mkdirs();
@@ -413,15 +427,18 @@ public class UIMediaScanner extends UZModule {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-
 		return imagePath.getAbsolutePath();
 	}
-
+	
 	public JSONObject creatRetJSON(List<FileInfo> list, boolean isScan) {
+		return creatRetJSON(list, isScan, 157, 157);
+	}
+
+	public JSONObject creatRetJSON(List<FileInfo> list, boolean isScan, int thumbNailWidth, int thumbNailHeight) {
 
 		JSONObject retJSON = new JSONObject();
 		JSONArray array = new JSONArray();
-
+		
 		try {
 			for (int i = 0; i < list.size(); i++) {
 				JSONObject obj = new JSONObject();
@@ -431,14 +448,14 @@ public class UIMediaScanner extends UZModule {
 					obj.put("thumbPath", list.get(i).thumbImgPath);
 				} else {
 
-					String realPathStr = SDCARD_PATH + "/DCIM/.thumbnails_for_me";
+					String realPathStr = CACHE_PATH + "/thumbnails_for_me";
 					File realPath = new File(realPathStr);
 					File imagePath = new File(realPath, Util.stringToMD5(list.get(i).path) + ".jpg");
 
 					if (imagePath.exists()) {
 						obj.put("thumbPath", imagePath.getAbsolutePath());
 					} else {
-						String tmpPath = createThumbPath(list.get(i).path);
+						String tmpPath = createThumbPath(list.get(i).path, thumbNailWidth, thumbNailHeight);
 						if (!TextUtils.isEmpty(tmpPath)) {
 							obj.put("thumbPath", tmpPath);
 						}
@@ -456,7 +473,7 @@ public class UIMediaScanner extends UZModule {
 
 					if (TextUtils.isEmpty(list.get(i).thumbImgPath) || !new File(list.get(i).thumbImgPath).exists()) {
 
-						String realPathStr = SDCARD_PATH + "/DCIM/.thumbnails_for_me";
+						String realPathStr = CACHE_PATH + "/thumbnails_for_me";
 						File realPath = new File(realPathStr);
 						if (!realPath.exists()) {
 							realPath.mkdirs();
@@ -529,11 +546,10 @@ public class UIMediaScanner extends UZModule {
 	@Override
 	protected void onClean() {
 		super.onClean();
-
+		
 		ConfigInfo.cancelBgBitmap = null;
 		ConfigInfo.finishBgBitmap = null;
 		ConfigInfo.navBgBitmap = null;
-
 	}
 
 	@SuppressWarnings("unused")

@@ -62,7 +62,7 @@ public class Util {
 			String[] str;
 
 			for (int i = 0; i < allimglist.size(); i++) {
-				
+
 				FileInfo fileInfo = allimglist.get(i);
 				if (fileInfo != null) {
 					retulist.add(getfileinfo(fileInfo.path));
@@ -172,7 +172,9 @@ public class Util {
 
 	public static final String SDCARD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
 
-	public static final String THUMBNAIL_SAVE_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/.thumbnails_for_me";
+	// public static final String THUMBNAIL_SAVE_PATH =
+	// Environment.getExternalStorageDirectory().getAbsolutePath() +
+	// "/DCIM/.thumbnails_for_me";
 
 	private int fileCount = 0;
 
@@ -186,7 +188,7 @@ public class Util {
 
 		Bitmap createdBitmap = ThumbnailUtils.extractThumbnail(srcBitmap, 157, 157);
 
-		String realPathStr = SDCARD_PATH + "/DCIM/.thumbnails_for_me";
+		String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
 		File realPath = new File(realPathStr);
 		if (!realPath.exists()) {
 			realPath.mkdirs();
@@ -287,7 +289,7 @@ public class Util {
 			String[] selectionArgs = new String[] { id + "" };
 
 			Cursor thumbCursor = mContext.getContentResolver().query(MediaStore.Video.Thumbnails.EXTERNAL_CONTENT_URI, thumbColumns, selection, selectionArgs, null);
-			if (thumbCursor.moveToFirst()) {
+			if (thumbCursor != null && thumbCursor.moveToFirst()) {
 				info.thumbImgPath = thumbCursor.getString(videoCur.getColumnIndexOrThrow(MediaStore.Video.Thumbnails.DATA));
 			}
 
@@ -358,7 +360,7 @@ public class Util {
 
 							if (!TextUtils.isEmpty(params[i].path)) {
 
-								String realPathStr = SDCARD_PATH + "/DCIM/.thumbnails_for_me";
+								String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
 								File realPath = new File(realPathStr);
 								File imagePath = new File(realPath, Util.stringToMD5(params[i].path) + ".jpg");
 
@@ -378,7 +380,7 @@ public class Util {
 							if (!TextUtils.isEmpty(params[i].thumbImgPath) && new File(params[i].thumbImgPath).exists()) {
 								bitmap = getPathBitmap(Uri.fromFile(new File(params[i].thumbImgPath)), 200, 200);
 							} else {
-								String realPathStr = SDCARD_PATH + "/DCIM/.thumbnails_for_me";
+								String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
 								File realPath = new File(realPathStr);
 								File imagePath = new File(realPath, Util.stringToMD5(params[i].path) + ".jpg");
 
@@ -425,7 +427,7 @@ public class Util {
 			return;
 		}
 
-		String realPathStr = SDCARD_PATH + "/DCIM/.thumbnails_for_me";
+		String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
 		File realPath = new File(realPathStr);
 		if (!realPath.exists()) {
 			realPath.mkdirs();
@@ -439,7 +441,6 @@ public class Util {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-
 		if (outStream != null) {
 			try {
 				outStream.close();
@@ -448,6 +449,39 @@ public class Util {
 			}
 		}
 	}
+
+	public static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+		// Raw height and width of image
+		final int height = options.outHeight;
+		final int width = options.outWidth;
+		int inSampleSize = 1;
+
+		if (height > reqHeight || width > reqWidth) {
+			if (width > height) {
+				inSampleSize = Math.round((float) height / (float) reqHeight);
+			} else {
+				inSampleSize = Math.round((float) width / (float) reqWidth);
+			}
+		}
+		return inSampleSize;
+	}
+	
+	
+	public static Bitmap decodeSampledBitmapFromFile(String fileName,  
+            int reqWidth, int reqHeight) {  
+  
+        // First decode with inJustDecodeBounds=true to check dimensions  
+        final BitmapFactory.Options options = new BitmapFactory.Options();  
+        options.inJustDecodeBounds = true;  
+        BitmapFactory.decodeFile(fileName ,options);  
+  
+        // Calculate inSampleSize  
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);  
+  
+        // Decode bitmap with inSampleSize set  
+        options.inJustDecodeBounds = false;  
+        return BitmapFactory.decodeFile(fileName, options);
+    } 
 
 	/**
 	 * 将字符串转成MD5值

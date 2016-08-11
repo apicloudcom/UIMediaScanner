@@ -17,9 +17,6 @@ public class ConfigInfo implements Serializable {
 	public static final String FILTER_PICTURE = "picture";
 	public static final String FILTER_VIDEO = "video";
 	
-	/**
-	 * 旋转的角度
-	 */
 	public boolean rotation = false;
 	
 	/**

@@ -13,6 +13,7 @@
 #import <AssetsLibrary/AssetsLibrary.h>
 #import "UZUIAssetsGroupViewController.h"
 #import "UZUIAssetNavigationController.h"
+#import <CommonCrypto/CommonDigest.h>
 
 @interface UZUIMediaScanner ()
 <AssetsViewCallBack> {
@@ -21,19 +22,21 @@
     NSMutableArray *_picAry, *_vidAry, *_allAry, *_cBAll;
     NSInteger capicity;          //每页数据容量
     BOOL preparedData;           //所需数据是否准备完
+    CGSize thumbSize;            //缩略图大小
 }
 
 @property (nonatomic, strong) NSMutableArray *assets;
 @property (nonatomic, strong) NSMutableDictionary *scanDict;
 @property (nonatomic, strong) NSOperationQueue *transPathQueue;
-
 @end
 
 @implementation UZUIMediaScanner
 
 @synthesize assets = _assets;
 @synthesize scanDict = _scanDict;
+
 static int fetchPosition = 0;
+//static UIImage *imageTrasn = nil;
 
 #pragma mark -
 #pragma mark  lifeCycle
@@ -56,7 +59,7 @@ static int fetchPosition = 0;
 - (NSOperationQueue *)transPathQueue {
     if (!_transPathQueue) {
         _transPathQueue = [[NSOperationQueue alloc]init];
-        NSInteger maxOperation = [[NSProcessInfo processInfo]activeProcessorCount];
+        NSInteger maxOperation = 1;//[[NSProcessInfo processInfo]activeProcessorCount];
         [_transPathQueue setMaxConcurrentOperationCount:maxOperation];
     }
     return _transPathQueue;
@@ -78,6 +81,10 @@ static int fetchPosition = 0;
     self.assets = [NSMutableArray arrayWithCapacity:1];
     _scanDict = [NSMutableDictionary dictionaryWithDictionary:paramsDict_];
     cbScannerId = [paramsDict_ integerValueForKey:@"cbId" defaultValue:-1];
+    NSDictionary *thumbSizeInfo = [paramsDict_ dictValueForKey:@"thumbnail" defaultValue:@{}];
+    CGFloat thumbW = [thumbSizeInfo floatValueForKey:@"w" defaultValue:100.0];
+    CGFloat thumbH = [thumbSizeInfo floatValueForKey:@"h" defaultValue:100.0];
+    thumbSize = CGSizeMake(thumbW, thumbH);
     [NSThread detachNewThreadSelector:@selector(loadDataSource:) toTarget:self withObject:nil];
 }
 
@@ -99,24 +106,50 @@ static int fetchPosition = 0;
     if (path.length == 0) {
         return;
     }
+    NSURL *url = [[NSURL alloc] initWithString:path];
+    //__block UIImage *imageAss = nil;
+    __weak UZUIMediaScanner *wealSelf = self;
+    ALAssetsLibraryAssetForURLResultBlock resultblock = ^(ALAsset *myasset) {
+        //创建NSBlockOperation 来执行每一次转换，图片复制等耗时操作
+        NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
+            UIImage *imageTrasn = [UIImage imageWithCGImage:myasset.defaultRepresentation.fullResolutionImage
+                                                                                                                             scale:myasset.defaultRepresentation.scale
+                                                                                                                       orientation:(UIImageOrientation)myasset.defaultRepresentation.orientation];
+            imageTrasn = [self imageCorrectedForCaptureOrientation:imageTrasn UIImageOrientation:imageTrasn.imageOrientation];
+            [wealSelf save:imageTrasn imagePath:path cbId:transCbId];
+        }];
+        [wealSelf.transPathQueue addOperation:operation];
+    };
+    ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror) {
+        NSLog(@"Turbo_UIMediascanner_cant get image - %@",[myerror localizedDescription]);
+    };
+    ALAssetsLibrary *assetsLibrary;
+    assetsLibrary = [self.class defaultAssetsLibrary];
+    [assetsLibrary assetForURL:url resultBlock:resultblock failureBlock:failureblock];
+
+    /*
     //创建NSBlockOperation 来执行每一次转换，图片复制等耗时操作
     NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
         NSURL *url = [[NSURL alloc] initWithString:path];
-        ALAssetsLibrary *assetslibrary = [[ALAssetsLibrary alloc] init];
-        __block UIImage *imageAss = nil;
+        //__block UIImage *imageAss = nil;
         ALAssetsLibraryAssetForURLResultBlock resultblock = ^(ALAsset *myasset) {
-            imageAss = [UIImage imageWithCGImage:myasset.defaultRepresentation.fullResolutionImage
+            NSLog(@"读取相册图片%d",transCount);
+            UIImage *imageTrasn = [UIImage imageWithCGImage:myasset.defaultRepresentation.fullResolutionImage
                                            scale:myasset.defaultRepresentation.scale
                                      orientation:(UIImageOrientation)myasset.defaultRepresentation.orientation];
-            imageAss = [self imageCorrectedForCaptureOrientation:imageAss UIImageOrientation:imageAss.imageOrientation];
-            [self save:imageAss imagePath:path cbId:transCbId];
+            //imageTrasn = [self imageCorrectedForCaptureOrientation:imageTrasn UIImageOrientation:imageTrasn.imageOrientation];
+            [self save:imageTrasn imagePath:path cbId:transCbId];
+            transCount ++;
         };
         ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror) {
             NSLog(@"Turbo_UIMediascanner_cant get image - %@",[myerror localizedDescription]);
         };
-        [assetslibrary assetForURL:url resultBlock:resultblock failureBlock:failureblock];
+        ALAssetsLibrary *assetsLibrary;
+        assetsLibrary = [self.class defaultAssetsLibrary];
+        [assetsLibrary assetForURL:url resultBlock:resultblock failureBlock:failureblock];
     }];
     [self.transPathQueue addOperation:operation];
+     */
 }
 
 #pragma mark -
@@ -253,9 +286,10 @@ static int fetchPosition = 0;
         NSURL *assetUrls = result.defaultRepresentation.url;
         //资源缩略图URL
         UIImage *image = [UIImage imageWithCGImage:result.thumbnail];
+        image = [self setNewSizeWithOriginImage:image toSize:thumbSize];
         NSString *imagePath = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
         NSFileManager *fileManager = [NSFileManager defaultManager];
-        NSString *filePath = [imagePath  stringByAppendingPathComponent:@"mediaScanner"];
+        NSString *filePath = [imagePath  stringByAppendingPathComponent:@"UIMediaScanner"];
         if (![fileManager fileExistsAtPath:imagePath]) {
             [fileManager createDirectoryAtPath:imagePath withIntermediateDirectories:YES attributes:nil error:nil];
         }
@@ -344,9 +378,10 @@ static int fetchPosition = 0;
         NSURL *assetUrls = result.defaultRepresentation.url;
         //资源缩略图URL
         UIImage *image = [UIImage imageWithCGImage:result.thumbnail];
+        image = [self setNewSizeWithOriginImage:image toSize:thumbSize];
         NSString *imagePath = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
         NSFileManager *fileManager = [NSFileManager defaultManager];
-        NSString *filePath = [imagePath  stringByAppendingPathComponent:@"mediaScanner"];
+        NSString *filePath = [imagePath  stringByAppendingPathComponent:@"UIMediaScanner"];
         if (![fileManager fileExistsAtPath:imagePath]) {
             [fileManager createDirectoryAtPath:imagePath withIntermediateDirectories:YES attributes:nil error:nil];
         }
@@ -426,33 +461,48 @@ static int fetchPosition = 0;
 
 - (void)save:(UIImage *)img imagePath:(NSString *)path cbId:(NSInteger)cbId {//保存指定图片到临时位置并回调改位置路径
     UIImage *saveImg = img;
+    /*
     NSRange ran2 = [path rangeOfString:@"id="];
     path = [path substringWithRange:NSMakeRange(ran2.location+3, path.length-ran2.location-3)];
     NSRange ran = [path rangeOfString:@"&ext="];
     NSString *name = [path substringToIndex:ran.location];
     NSString *type = [path substringWithRange:NSMakeRange(ran.location+ran.length, path.length-ran.location-ran.length)];
+     */
+    NSString *name = [self md5:path];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *filePath = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/UIMediaScanner"];
     if (![fileManager fileExistsAtPath:filePath]) {        //创建路径
         [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
     }
-    NSString *imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@.%@",name,type]];
-    BOOL isSave = NO;
-    NSData *data;
-    if (![type isEqualToString:@"png"]) {
+    NSData *data = UIImagePNGRepresentation(saveImg);
+    NSString *type = @".png";
+    if (!data && data.length==0) {
         data = UIImageJPEGRepresentation(saveImg, 1);
-    } else {
-        data = UIImagePNGRepresentation(saveImg);
+        type = @".jpg";
     }
+    NSString *imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@%@",name,type]];
     //创建文件
     if (data) {
         [fileManager createFileAtPath:imgPath contents:data attributes:nil];
-        isSave = YES;
     }
     //回到主线程
     dispatch_async(dispatch_get_main_queue(), ^{
         [self sendResultEventWithCallbackId:cbId dataDict:[NSDictionary dictionaryWithObjectsAndKeys:imgPath,@"path", nil] errDict:nil doDelete:YES];
     });
+}
+
+- (NSString *)md5:(NSString *)str{
+    const char *cStr = [str UTF8String];
+    unsigned char result[16];
+    CC_MD5( cStr, (unsigned)strlen(cStr), result );
+    return [NSString stringWithFormat:
+            @"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+            result[0], result[1], result[2], result[3],
+            result[4], result[5], result[6], result[7],
+            result[8], result[9], result[10], result[11],
+            result[12], result[13], result[14], result[15]
+            ];
+    
 }
 
 - (UIImage *)imageCorrectedForCaptureOrientation:(UIImage *)anImage UIImageOrientation:(UIImageOrientation)ImageOrientation {//旋转图片
@@ -465,7 +515,8 @@ static int fetchPosition = 0;
     switch (ImageOrientation) {
         case UIImageOrientationDown :
         case UIImageOrientationDownMirrored :
-            rotation_radians = M_PI; // don't be scared of radians, if you're reading this, you're good at math
+            // don't be scared of radians, if you're reading this, you're good at math
+            rotation_radians = M_PI;
             break;
             
         case UIImageOrientationRight:
@@ -499,6 +550,8 @@ static int fetchPosition = 0;
     return newImage;
 }
 
+#pragma mark - classify -
+
 - (void)classify:(NSDictionary *)paramsDict_ {
     BOOL classifyId = [paramsDict_ integerValueForKey:@"classify" defaultValue:NO];
     BOOL isRotation = [paramsDict_ boolValueForKey:@"rotation" defaultValue:false];
@@ -516,6 +569,16 @@ static int fetchPosition = 0;
         navi.isRotation = isRotation;
         [self.viewController presentViewController:navi animated:YES completion:^{}];
     }
+}
+
+#pragma mark - 修改 thumbnail 大小 -
+
+- (UIImage *)setNewSizeWithOriginImage:(UIImage *)oriImage toSize:(CGSize)newSize {
+    UIGraphicsBeginImageContext(newSize);
+    [oriImage drawInRect:CGRectMake(0, 0, newSize.width, newSize.height)];
+    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return newImage;
 }
 
 @end
