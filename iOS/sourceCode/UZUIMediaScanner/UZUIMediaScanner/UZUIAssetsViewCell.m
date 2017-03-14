@@ -50,11 +50,44 @@ static UIColor *titleColor;
     return self;
 }
 
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    if (self.showPreview || self.showBrowser) {
+        UIImage *selectedImg = nil;
+        NSString *icon = [self.markInfo stringValueForKey:@"icon" defaultValue:nil];
+        if (icon.length > 0) {
+            selectedImg = [UIImage imageWithContentsOfFile:self.getPath(icon)];
+        } else {
+            selectedImg = [UIImage imageWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"res_UIMediaScanner/UZAssetsPickerChecked" ofType:@"png"]];
+        }
+        float size = [self.markInfo floatValueForKey:@"size" defaultValue:collectionViewWidth / 3.0];
+        self.selectBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        _selectBtn.frame = CGRectMake(self.frame.size.width- size, 0, size, size);
+        [_selectBtn setImage:selectedImg forState:UIControlStateSelected];
+        //[_selectBtn setImageEdgeInsets:UIEdgeInsetsMake(5, 5, 5, 5)];
+        UIImage *selectImg = [UIImage imageWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"res_UIMediaScanner/normal" ofType:@"png"]];
+        [_selectBtn setImage:selectImg forState:UIControlStateNormal];
+        [_selectBtn addTarget:self action:@selector(selectButton:) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:_selectBtn];
+    }
+}
+
+- (void)selectButton:(UIButton *)btn {
+    [self.selectBtn setSelected:!btn.selected];
+    if ([self.delegate respondsToSelector:@selector(didSelectedAssetCell:withSelected:)]) {
+        [self.delegate didSelectedAssetCell:self withSelected:self.selectBtn.selected];
+    }
+}
+
 - (void)bind:(ALAsset *)asset {
     self.asset = asset;
     self.imageUI = [UIImage imageWithCGImage:asset.thumbnail];
     self.type = [asset valueForProperty:ALAssetPropertyType];
+    if (self.showPreview || self.showBrowser) {
+        [self setNeedsDisplay];
+    }
 }
+
 - (void)setSelected:(BOOL)selected {
     [super setSelected:selected];
     [self setNeedsDisplay];
@@ -62,6 +95,9 @@ static UIColor *titleColor;
 
 - (void)drawRect:(CGRect)rect {
     [self.imageUI drawInRect:CGRectMake(0, 0, collectionViewWidth, collectionViewWidth)];
+    if (self.showPreview || self.showBrowser) {
+        return;
+    }
     if ([self.type isEqual:ALAssetTypeVideo]) {
         CGFloat colors [] = {
             0.0, 0.0, 0.0, 0.0,
@@ -82,6 +118,9 @@ static UIColor *titleColor;
         [titleColor set];
         [self.title drawAtPoint:CGPointMake(rect.size.width - titleSize.width - 2 , startPoint.y + (titleHeight - 12) / 2) forWidth:collectionViewWidth withFont:titleFont fontSize:12 lineBreakMode:NSLineBreakByTruncatingTail baselineAdjustment:UIBaselineAdjustmentAlignCenters];
         [videoIcon drawAtPoint:CGPointMake(2, startPoint.y + (titleHeight - videoIcon.size.height) / 2.0)];
+    }
+    if (self.showPreview || self.showBrowser) {
+        return;
     }
     if (self.selected) {
         CGContextRef context = UIGraphicsGetCurrentContext();

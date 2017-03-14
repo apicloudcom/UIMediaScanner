@@ -8,6 +8,8 @@
 #import <UIKit/UIKit.h>
 #import <AssetsLibrary/AssetsLibrary.h>
 
+@protocol AssetCellViewDelegate;
+
 typedef NSString *(^GetPathBolock)(NSString *);
 
 @interface UZUIAssetsViewCell : UICollectionViewCell
@@ -15,7 +17,16 @@ typedef NSString *(^GetPathBolock)(NSString *);
 @property (nonatomic, copy) GetPathBolock getPath;
 @property (nonatomic, assign) float collectionViewWidth;
 @property (nonatomic, strong) NSDictionary *markInfo;
+@property (nonatomic, assign) BOOL showPreview, showBrowser;
+@property (nonatomic, assign) id <AssetCellViewDelegate> delegate;
+@property (nonatomic, strong) UIButton *selectBtn;
 
 - (void)bind:(ALAsset *)asset;
+
+@end
+
+@protocol AssetCellViewDelegate <NSObject>
+
+- (void)didSelectedAssetCell:(UZUIAssetsViewCell *)cell withSelected:(BOOL)select;
 
 @end

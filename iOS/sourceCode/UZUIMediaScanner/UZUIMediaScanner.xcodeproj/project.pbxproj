@@ -11,6 +11,7 @@
 		71B53F3D1B450C200048E8B9 /* UZUIMediaScanner.m in Sources */ = {isa = PBXBuildFile; fileRef = 71B53F381B450C200048E8B9 /* UZUIMediaScanner.m */; };
 		71B53F3F1B450C200048E8B9 /* UZUIAssetsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 71B53F3C1B450C200048E8B9 /* UZUIAssetsViewController.m */; };
 		71E10B6B1BAA7095003DB24C /* UZUIAssetsGroupViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 71E10B6A1BAA7095003DB24C /* UZUIAssetsGroupViewController.m */; };
+		B55C46DF1E52BC1B00E262FF /* PrivewViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = B55C46DE1E52BC1B00E262FF /* PrivewViewController.m */; };
 		B58C1B3F1CBCF2E800174447 /* UZUIAssetNavigationController.m in Sources */ = {isa = PBXBuildFile; fileRef = B58C1B3E1CBCF2E800174447 /* UZUIAssetNavigationController.m */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +40,30 @@
 		71DE682B1B44CF33001F7DA0 /* libUZUIMediaScanner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libUZUIMediaScanner.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		71E10B691BAA7095003DB24C /* UZUIAssetsGroupViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZUIAssetsGroupViewController.h; sourceTree = "<group>"; };
 		71E10B6A1BAA7095003DB24C /* UZUIAssetsGroupViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UZUIAssetsGroupViewController.m; sourceTree = "<group>"; };
+		B55C46841E51A79E00E262FF /* EBCaptionView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBCaptionView.h; sourceTree = "<group>"; };
+		B55C46861E51A79E00E262FF /* EBCommentCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBCommentCell.h; sourceTree = "<group>"; };
+		B55C46871E51A79E00E262FF /* EBCommentsTableView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBCommentsTableView.h; sourceTree = "<group>"; };
+		B55C46881E51A79E00E262FF /* EBCommentsView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBCommentsView.h; sourceTree = "<group>"; };
+		B55C46891E51A79E00E262FF /* EBCommentsViewDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBCommentsViewDelegate.h; sourceTree = "<group>"; };
+		B55C468A1E51A79E00E262FF /* EBPhotoCommentProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoCommentProtocol.h; sourceTree = "<group>"; };
+		B55C468C1E51A79E00E262FF /* EBPhotoPagesController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesController.h; sourceTree = "<group>"; };
+		B55C468D1E51A79E00E262FF /* EBPhotoPagesDataSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesDataSource.h; sourceTree = "<group>"; };
+		B55C468E1E51A79E00E262FF /* EBPhotoPagesDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesDelegate.h; sourceTree = "<group>"; };
+		B55C46901E51A79E00E262FF /* EBPhotoPagesFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesFactory.h; sourceTree = "<group>"; };
+		B55C46911E51A79E00E262FF /* EBPhotoPagesNotifications.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesNotifications.h; sourceTree = "<group>"; };
+		B55C46921E51A79E00E262FF /* EBPhotoPagesOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesOperation.h; sourceTree = "<group>"; };
+		B55C46931E51A79E00E262FF /* EBPhotoToolbar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoToolbar.h; sourceTree = "<group>"; };
+		B55C46941E51A79E00E262FF /* EBShadedView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBShadedView.h; sourceTree = "<group>"; };
+		B55C46961E51A79E00E262FF /* EBPhotoView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoView.h; sourceTree = "<group>"; };
+		B55C46971E51A79E00E262FF /* EBPhotoViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoViewController.h; sourceTree = "<group>"; };
+		B55C46981E51A79E00E262FF /* EBPhotoViewControllerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoViewControllerDelegate.h; sourceTree = "<group>"; };
+		B55C469A1E51A79E00E262FF /* EBPhotoPagesState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesState.h; sourceTree = "<group>"; };
+		B55C469B1E51A79E00E262FF /* EBPhotoPagesStateDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoPagesStateDelegate.h; sourceTree = "<group>"; };
+		B55C469D1E51A79E00E262FF /* EBPhotoTagProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBPhotoTagProtocol.h; sourceTree = "<group>"; };
+		B55C469E1E51A79E00E262FF /* EBTagPopover.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBTagPopover.h; sourceTree = "<group>"; };
+		B55C469F1E51A79E00E262FF /* EBTagPopoverDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EBTagPopoverDelegate.h; sourceTree = "<group>"; };
+		B55C46DD1E52BC1B00E262FF /* PrivewViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PrivewViewController.h; sourceTree = "<group>"; };
+		B55C46DE1E52BC1B00E262FF /* PrivewViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PrivewViewController.m; sourceTree = "<group>"; };
 		B58C1B3D1CBCF2E800174447 /* UZUIAssetNavigationController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UZUIAssetNavigationController.h; sourceTree = "<group>"; };
 		B58C1B3E1CBCF2E800174447 /* UZUIAssetNavigationController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UZUIAssetNavigationController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -92,10 +117,98 @@
 				03932F981B9D953000E30AB9 /* UZUIAssetsViewCell.m */,
 				71B53F3B1B450C200048E8B9 /* UZUIAssetsViewController.h */,
 				71B53F3C1B450C200048E8B9 /* UZUIAssetsViewController.m */,
+				B55C46DD1E52BC1B00E262FF /* PrivewViewController.h */,
+				B55C46DE1E52BC1B00E262FF /* PrivewViewController.m */,
 				71E10B691BAA7095003DB24C /* UZUIAssetsGroupViewController.h */,
 				71E10B6A1BAA7095003DB24C /* UZUIAssetsGroupViewController.m */,
+				B55C46821E51A79E00E262FF /* EBPhotoBrowser */,
 			);
 			path = UZUIMediaScanner;
+			sourceTree = "<group>";
+		};
+		B55C46821E51A79E00E262FF /* EBPhotoBrowser */ = {
+			isa = PBXGroup;
+			children = (
+				B55C46831E51A79E00E262FF /* Caption */,
+				B55C46851E51A79E00E262FF /* Comments */,
+				B55C468B1E51A79E00E262FF /* EBPhotoPagesController */,
+				B55C468F1E51A79E00E262FF /* Helpers */,
+				B55C46951E51A79E00E262FF /* Photos */,
+				B55C46991E51A79E00E262FF /* StateObjects */,
+				B55C469C1E51A79E00E262FF /* Tags */,
+			);
+			path = EBPhotoBrowser;
+			sourceTree = "<group>";
+		};
+		B55C46831E51A79E00E262FF /* Caption */ = {
+			isa = PBXGroup;
+			children = (
+				B55C46841E51A79E00E262FF /* EBCaptionView.h */,
+			);
+			path = Caption;
+			sourceTree = "<group>";
+		};
+		B55C46851E51A79E00E262FF /* Comments */ = {
+			isa = PBXGroup;
+			children = (
+				B55C46861E51A79E00E262FF /* EBCommentCell.h */,
+				B55C46871E51A79E00E262FF /* EBCommentsTableView.h */,
+				B55C46881E51A79E00E262FF /* EBCommentsView.h */,
+				B55C46891E51A79E00E262FF /* EBCommentsViewDelegate.h */,
+				B55C468A1E51A79E00E262FF /* EBPhotoCommentProtocol.h */,
+			);
+			path = Comments;
+			sourceTree = "<group>";
+		};
+		B55C468B1E51A79E00E262FF /* EBPhotoPagesController */ = {
+			isa = PBXGroup;
+			children = (
+				B55C468C1E51A79E00E262FF /* EBPhotoPagesController.h */,
+				B55C468D1E51A79E00E262FF /* EBPhotoPagesDataSource.h */,
+				B55C468E1E51A79E00E262FF /* EBPhotoPagesDelegate.h */,
+			);
+			path = EBPhotoPagesController;
+			sourceTree = "<group>";
+		};
+		B55C468F1E51A79E00E262FF /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				B55C46901E51A79E00E262FF /* EBPhotoPagesFactory.h */,
+				B55C46911E51A79E00E262FF /* EBPhotoPagesNotifications.h */,
+				B55C46921E51A79E00E262FF /* EBPhotoPagesOperation.h */,
+				B55C46931E51A79E00E262FF /* EBPhotoToolbar.h */,
+				B55C46941E51A79E00E262FF /* EBShadedView.h */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		B55C46951E51A79E00E262FF /* Photos */ = {
+			isa = PBXGroup;
+			children = (
+				B55C46961E51A79E00E262FF /* EBPhotoView.h */,
+				B55C46971E51A79E00E262FF /* EBPhotoViewController.h */,
+				B55C46981E51A79E00E262FF /* EBPhotoViewControllerDelegate.h */,
+			);
+			path = Photos;
+			sourceTree = "<group>";
+		};
+		B55C46991E51A79E00E262FF /* StateObjects */ = {
+			isa = PBXGroup;
+			children = (
+				B55C469A1E51A79E00E262FF /* EBPhotoPagesState.h */,
+				B55C469B1E51A79E00E262FF /* EBPhotoPagesStateDelegate.h */,
+			);
+			path = StateObjects;
+			sourceTree = "<group>";
+		};
+		B55C469C1E51A79E00E262FF /* Tags */ = {
+			isa = PBXGroup;
+			children = (
+				B55C469D1E51A79E00E262FF /* EBPhotoTagProtocol.h */,
+				B55C469E1E51A79E00E262FF /* EBTagPopover.h */,
+				B55C469F1E51A79E00E262FF /* EBTagPopoverDelegate.h */,
+			);
+			path = Tags;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -159,6 +272,7 @@
 				71E10B6B1BAA7095003DB24C /* UZUIAssetsGroupViewController.m in Sources */,
 				B58C1B3F1CBCF2E800174447 /* UZUIAssetNavigationController.m in Sources */,
 				03932F991B9D953000E30AB9 /* UZUIAssetsViewCell.m in Sources */,
+				B55C46DF1E52BC1B00E262FF /* PrivewViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -200,7 +314,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -236,7 +350,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;

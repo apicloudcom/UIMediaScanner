@@ -10,21 +10,23 @@
 #import "UZAppUtils.h"
 #import "NSDictionaryUtils.h"
 #import "UZUIAssetsViewCell.h"
+#import <AVFoundation/AVFoundation.h>
+#import "PrivewViewController.h"
 
 #define kPopoverContentSize self.view.bounds.size
 #define kAssetsViewCellIdentifier           @"AssetsViewCellIdentifier"
 #define kAssetsSupplementaryViewIdentifier  @"AssetsSupplementaryViewIdentifier"
 
 @interface UZUIAssetsViewController ()
-<UIScrollViewDelegate> {
+<UIScrollViewDelegate, AssetCellViewDelegate> {
     NSDictionary *markDict;
     NSString *_type;             //type类型：all/picture/video
     float collectionViewWidth;
-    BOOL isAnimScroll;
+    BOOL isAnimScroll, didShowPreview;
     NSTimer *_timer;
 }
 
-@property (nonatomic, strong) NSMutableArray *UIassets;
+@property (nonatomic, strong) NSMutableArray *allAssetsAry;
 @property (nonatomic, assign) NSInteger column;
 @property (nonatomic, strong) NSMutableArray *assetsArrSelected;
 @property (nonatomic, strong) NSMutableDictionary *selectedState;
@@ -35,30 +37,14 @@
 
 @synthesize delegate;
 
-#pragma mark -
-#pragma mark  lifeCycle
-#pragma mark -
-
-- (NSMutableDictionary *)selectedState {
-    if (!_selectedState) {
-        _selectedState = [[NSMutableDictionary alloc]init];
-    }
-    return _selectedState;
-}
-
-- (NSMutableArray *)assetsArrSelected {
-    if (!_assetsArrSelected) {
-        _assetsArrSelected = [NSMutableArray array];
-    }
-    return _assetsArrSelected;
-}
+#pragma mark - lifeCycle -
 
 - (id)initWithDict:(NSDictionary *)paramsDict_ {
+    didShowPreview = NO;
     self.column = [paramsDict_ integerValueForKey:@"column" defaultValue:4];
     if (self.column == 0) {
         self.column = 4;
     }
-    
     _type = [paramsDict_ stringValueForKey:@"type" defaultValue:@"all"];
     NSDictionary *style = [paramsDict_ dictValueForKey:@"styles" defaultValue:@{}];
     markDict = [style dictValueForKey:@"mark" defaultValue:@{}];
@@ -79,6 +65,7 @@
         self.collectionView.allowsMultipleSelection = YES;
         
         [self.collectionView registerClass:[UICollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionFooter withReuseIdentifier:kAssetsSupplementaryViewIdentifier];
+        //横竖屏转换监听
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(changeFrames:)
                                                      name:UIDeviceOrientationDidChangeNotification
@@ -95,13 +82,16 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
+    if (didShowPreview) {
+        return;
+    }
     [self setupButtons];              //设置导航条
-    if (self.isClassify) {            //相册分类显示列表,获取当前相册中的照片
+    if (self.isClassify) {            //若是相册分组显示列表进来的,则获取当前分组中的照片并排序
         [self setupAssetsOfGroup];
     } else {
-        [self setupGroup];            //获取所有照片
+        [self setupGroup];            //若相册显示不分组，则获取所有照片并排序
     }
-    
+    //一段时间滚动到最底部区域显示
     NSDictionary *scrollToBottom = [self.paramsDict dictValueForKey:@"scrollToBottom" defaultValue:@{}];
     float timeInval = [scrollToBottom floatValueForKey:@"intervalTime" defaultValue:-1];
     isAnimScroll = [scrollToBottom boolValueForKey:@"anim" defaultValue:true];
@@ -115,18 +105,44 @@
     }
 }
 
-- (void)viewDidDisappear:(BOOL)animated {
+- (void)dealloc {
     if (_timer) {
         [_timer invalidate];
         _timer = nil;
     }
 }
 
-- (void)scrollToBottom:(id)info {
-    [self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:self.UIassets.count-1 inSection:0] atScrollPosition:UICollectionViewScrollPositionBottom animated:isAnimScroll];
+#pragma mark - lifeUtils -
+
++ (ALAssetsLibrary *)defaultAssetsLibrary {
+    static dispatch_once_t pred = 0;
+    static ALAssetsLibrary *library = nil;
+    dispatch_once(&pred, ^{
+        library = [[ALAssetsLibrary alloc] init];
+    });
+    return library;
 }
 
-- (void)changeFrames:(NSNotification *)notification {
+- (NSMutableDictionary *)selectedState {
+    if (!_selectedState) {
+        _selectedState = [[NSMutableDictionary alloc]init];
+    }
+    return _selectedState;
+}
+
+- (NSMutableArray *)assetsArrSelected {
+    if (!_assetsArrSelected) {
+        _assetsArrSelected = [NSMutableArray array];
+    }
+    return _assetsArrSelected;
+}
+- (void)scrollToBottom:(id)info {
+    if (self.allAssetsAry.count) {
+        [self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:self.allAssetsAry.count-1 inSection:0] atScrollPosition:UICollectionViewScrollPositionBottom animated:isAnimScroll];
+    }
+}
+
+- (void)changeFrames:(NSNotification *)notification {//横竖屏转换时适配
     if ([[UIDevice currentDevice] orientation] == UIInterfaceOrientationPortrait
         || [[UIDevice currentDevice] orientation] == UIInterfaceOrientationPortraitUpsideDown) {
         self.collectionView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -140,16 +156,14 @@
     [self.collectionView reloadData];
 }
 
-#pragma mark -
-#pragma mark  初始化界面
-#pragma mark -
+#pragma mark 初始化界面
 
-- (void)setupViews {
+- (void)setupViews {//背景
     NSString * bgColor = [[self.paramsDict dictValueForKey:@"styles" defaultValue:@{}] stringValueForKey:@"bg" defaultValue:@"#fff"];
     self.collectionView.backgroundColor = bgColor?[UZAppUtils colorFromNSString:bgColor]:[UIColor whiteColor];
 }
 
-- (void)setupButtons{
+- (void)setupButtons{//导航条
     NSDictionary *styles = [self.paramsDict dictValueForKey:@"styles" defaultValue:@{}];
     NSDictionary *navDic = [styles dictValueForKey:@"nav" defaultValue:@{}];
     NSDictionary *texts = [self.paramsDict dictValueForKey:@"texts" defaultValue:@{}];
@@ -209,7 +223,7 @@
     completeBtn.titleLabel.font = [UIFont systemFontOfSize:finishTitleSize];
     [completeBtn setTitleColor:finishTitleColor forState:UIControlStateNormal];
     [completeBtn setTitle:finishBtnTittle forState:UIControlStateNormal];
-    [completeBtn addTarget:self action:@selector(done) forControlEvents:UIControlEventTouchUpInside];
+    [completeBtn addTarget:self action:@selector(done:) forControlEvents:UIControlEventTouchUpInside];
     if (isExchange) {
         self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:cancelBtn];
         self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:completeBtn];
@@ -219,31 +233,29 @@
     }
 }
 
-#pragma mark -
-#pragma mark  读取当前选中组照片数据
-#pragma mark -
+#pragma mark 读取当前组中图片信息到self.UIassets中
 
 - (void)setupAssetsOfGroup {
     NSDictionary *stateInfo = [self.paramsDict dictValueForKey:@"texts" defaultValue:@{}];
     self.title = [stateInfo stringValueForKey:@"stateText" defaultValue:@"已选择*项"];
-    if (!self.UIassets.count) {
-        self.UIassets = [NSMutableArray arrayWithCapacity:1];
+    if (!self.allAssetsAry.count) {
+        self.allAssetsAry = [NSMutableArray arrayWithCapacity:1];
     } else {
-        [self.UIassets removeAllObjects];
+        [self.allAssetsAry removeAllObjects];
     }
     ALAssetsGroupEnumerationResultsBlock resultsBlock = ^(ALAsset *asset, NSUInteger index, BOOL *stop) {
         if (asset){
             if ([_type isEqualToString:@"picture"]) {
                 if ([[asset valueForProperty:ALAssetPropertyType] isEqualToString:ALAssetTypePhoto]) {
-                    [self.UIassets addObject:asset];  //asset类型不一样
+                    [self.allAssetsAry addObject:asset];  //asset类型不一样
                 }
             } else if ([_type isEqualToString:@"video"]) {
                 if([[asset valueForProperty:ALAssetPropertyType] isEqualToString:ALAssetTypeVideo]) {
-                    [self.UIassets addObject:asset];  //asset类型不一样
+                    [self.allAssetsAry addObject:asset];  //asset类型不一样
                 }
             } else {
                 _type = @"all";
-                [self.UIassets addObject:asset];
+                [self.allAssetsAry addObject:asset];
             }
         }
     };
@@ -251,12 +263,9 @@
     [self sort];
 }
 
-#pragma mark -
-#pragma mark  读取所有照片数据
-#pragma mark -
+#pragma mark 读取本地相册所有资源信息到self.groups数组中
 
-//读取相册数据
-- (void)setupGroup {
+- (void)setupGroup {//读取相册数据后刷新界面
     if (!self.assetsLibrary) {
         self.assetsLibrary = [self.class defaultAssetsLibrary];
     }
@@ -287,28 +296,28 @@
                                     failureBlock:failureBlock];
 }
 
-//刷新显示界面
+#pragma mark 遍历self.groups读取图片信息到self.UIassets中，然后排序
 - (void)setupAssets {
     NSDictionary *stateInfo = [self.paramsDict dictValueForKey:@"texts" defaultValue:@{}];
     self.title = [stateInfo stringValueForKey:@"stateText" defaultValue:@"已选择*项"];
-    if (!self.UIassets.count) {
-        self.UIassets = [NSMutableArray arrayWithCapacity:1];
+    if (!self.allAssetsAry.count) {
+        self.allAssetsAry = [NSMutableArray arrayWithCapacity:1];
     } else {
-        [self.UIassets removeAllObjects];
+        [self.allAssetsAry removeAllObjects];
     }
     ALAssetsGroupEnumerationResultsBlock resultsBlock = ^(ALAsset *asset, NSUInteger index, BOOL *stop) {
         if (asset){
             if ([_type isEqualToString:@"picture"]) {
                 if ([[asset valueForProperty:ALAssetPropertyType] isEqualToString:ALAssetTypePhoto]) {
-                    [self.UIassets addObject:asset];  //asset类型不一样
+                    [self.allAssetsAry addObject:asset];  //asset类型不一样
                 }
             } else if ([_type isEqualToString:@"video"]) {
                 if([[asset valueForProperty:ALAssetPropertyType] isEqualToString:ALAssetTypeVideo]) {
-                    [self.UIassets addObject:asset];  //asset类型不一样
+                    [self.allAssetsAry addObject:asset];  //asset类型不一样
                 }
             } else {
                 _type = @"all";
-                [self.UIassets addObject:asset];
+                [self.allAssetsAry addObject:asset];
             }
         }
     };
@@ -323,18 +332,14 @@
     [self.groups enumerateObjectsUsingBlock:enumGroups];
 }
 
-- (void)reloadData {
-    [self.collectionView reloadData];
-}
-
-//排序
+#pragma mark 排序
 - (void)sort {
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         NSDictionary *sortInfo = [self.paramsDict dictValueForKey:@"sort" defaultValue:@{}];
         NSString *keyStr = [sortInfo stringValueForKey:@"key" defaultValue:@"time"];
         NSString *orderStr = [sortInfo stringValueForKey:@"order" defaultValue:@"desc"];
         if ([keyStr isEqualToString:@"time"]) {
-            NSArray *sortedArray = [self.UIassets sortedArrayUsingComparator:^( ALAsset *asset1,ALAsset *asset2) {
+            NSArray *sortedArray = [self.allAssetsAry sortedArrayUsingComparator:^( ALAsset *asset1,ALAsset *asset2) {
                 NSDate *pictureDate1 = [asset1 valueForProperty:ALAssetPropertyDate];
                 NSDate *pictureDate2 = [asset2 valueForProperty:ALAssetPropertyDate];
                 NSDate *date = [pictureDate1 earlierDate:pictureDate2];
@@ -344,12 +349,12 @@
                     return NSOrderedAscending;
                 }
             }];
-            [self.UIassets removeAllObjects];
-            [self.UIassets addObjectsFromArray:sortedArray];
+            [self.allAssetsAry removeAllObjects];
+            [self.allAssetsAry addObjectsFromArray:sortedArray];
         } else  {
             NSArray *sortedArray;
             if ([orderStr isEqualToString:@"desc"]) {
-                sortedArray = [self.UIassets sortedArrayUsingComparator:^( ALAsset *asset1,ALAsset *asset2) {
+                sortedArray = [self.allAssetsAry sortedArrayUsingComparator:^( ALAsset *asset1,ALAsset *asset2) {
                     if (asset1.defaultRepresentation.size > asset2.defaultRepresentation.size) {
                         return NSOrderedDescending;
                     } else {
@@ -357,7 +362,7 @@
                     }
                 }];
             } else {
-                sortedArray = [self.UIassets sortedArrayUsingComparator:^( ALAsset *asset1,ALAsset *asset2) {
+                sortedArray = [self.allAssetsAry sortedArrayUsingComparator:^( ALAsset *asset1,ALAsset *asset2) {
                     if (asset1.defaultRepresentation.size < asset2.defaultRepresentation.size) {
                         return NSOrderedAscending;
                     } else {
@@ -365,46 +370,57 @@
                     }
                 }];
             }
-            [self.UIassets removeAllObjects];
-            [self.UIassets addObjectsFromArray:sortedArray];
+            [self.allAssetsAry removeAllObjects];
+            [self.allAssetsAry addObjectsFromArray:sortedArray];
         }
         [self performSelectorOnMainThread:@selector(reloadData) withObject:nil waitUntilDone:NO];
     });
 }
 
-#pragma mark -
-#pragma mark  Collection View Data Source
-#pragma mark -
+- (void)reloadData {
+    [self.collectionView reloadData];
+}
+#pragma mark - CollectionDelegate -
+
+#pragma mark 数据源代理
 
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView {
     return 1;
 }
 
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
-    return self.UIassets.count;
+    return self.allAssetsAry.count;
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
     static NSString *CellIdentifier = kAssetsViewCellIdentifier;
     UZUIAssetsViewCell *cell = [self.collectionView dequeueReusableCellWithReuseIdentifier:CellIdentifier forIndexPath:indexPath];
+    cell.showPreview = self.showPreview;
+    cell.showBrowser = self.showBrowser;
+    cell.delegate = self;
     cell.collectionViewWidth = collectionViewWidth;
     cell.markInfo = markDict;
     __weak UZUIAssetsViewController *tempSelf = self;
     cell.getPath = ^(NSString *path){
         return [tempSelf.delegate getPath:path];
     };
-    if (indexPath.row < self.UIassets.count) {
-        ALAsset *aset = [self.UIassets objectAtIndex:indexPath.row];
+    if (indexPath.row < self.allAssetsAry.count) {
+        ALAsset *aset = [self.allAssetsAry objectAtIndex:indexPath.row];
         if (aset) {
             [cell bind:aset];
         }
     }
     // 刷新时重置cell的选中状态
+    if (self.showPreview || self.showBrowser) {
+        BOOL select = [[self.selectedState objectForKey:indexPath] boolValue];
+        [cell.selectBtn setSelected:select];
+        return cell;
+    }
     cell.selected = [[self.selectedState objectForKey:indexPath] boolValue];
     if (cell.selected) {
         //设置为被选中Item，否则处于“非状态”，无法触发 shouldSelectItemAtIndexPath、shouldDeselectItemAtIndexPath代理方法
         [self.collectionView selectItemAtIndexPath:indexPath animated:YES scrollPosition:UICollectionViewScrollPositionNone];
-        ALAsset *asset = [self.UIassets objectAtIndex:indexPath.item];
+        ALAsset *asset = [self.allAssetsAry objectAtIndex:indexPath.item];
         if (![self.assetsArrSelected containsObject:asset]) {
             [self.assetsArrSelected addObject:asset];
         }
@@ -414,11 +430,12 @@
     return cell;
 }
 
-#pragma mark -
-#pragma mark  Collection View Delegate
-#pragma mark -
+#pragma mark view代理
 
-- (BOOL)collectionView:(UICollectionView *)collectionView shouldSelectItemAtIndexPath:(NSIndexPath *)indexPath {
+- (BOOL)collectionView:(UICollectionView *)collectionView shouldSelectItemAtIndexPath:(NSIndexPath *)indexPath {//判断是否可选
+    if (self.showPreview || self.showBrowser) {
+        return YES;
+    }
     if (![self max:self.assetsArrSelected]) {
         return NO;
     } else {
@@ -426,8 +443,18 @@
     }
 }
 
-- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
-    ALAsset *asset = [self.UIassets objectAtIndex:indexPath.item];
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {//选中时调用
+    if (self.showPreview || self.showBrowser) {
+        [collectionView reloadItemsAtIndexPaths:@[indexPath]];
+        ALAsset *asset = [self.allAssetsAry objectAtIndex:indexPath.item];
+        if ([self.assetsArrSelected containsObject:asset]) {
+            NSInteger index = [self.assetsArrSelected indexOfObject:asset];
+            //触发预览事件
+            [self preview:index];
+        }
+        return;
+    }
+    ALAsset *asset = [self.allAssetsAry objectAtIndex:indexPath.item];
     if ([self.assetsArrSelected containsObject:asset]) {
         return;
     }
@@ -441,25 +468,51 @@
     return YES;
 }
 
-- (void)collectionView:(UICollectionView *)collectionView didDeselectItemAtIndexPath:(NSIndexPath *)indexPath {
-    ALAsset *asset = [self.UIassets objectAtIndex:indexPath.item];
+- (void)collectionView:(UICollectionView *)collectionView didDeselectItemAtIndexPath:(NSIndexPath *)indexPath {//取消选中时调用
+    if (self.showPreview || self.showBrowser) {
+        return;
+    }
+    ALAsset *asset = [self.allAssetsAry objectAtIndex:indexPath.item];
     [self.assetsArrSelected removeObject:asset];
     [self.selectedState setObject:[NSNumber numberWithBool:NO] forKey:indexPath];
     [self setTitleWithSelectedIndexPaths:self.assetsArrSelected];
 }
 
-- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath{
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath {//缩略图的大小
     float width = [UIScreen mainScreen].bounds.size.width;
     CGFloat collectionWidth = (width - (self.column + 1)*2)/self.column;
-    //缩略图的大小
     CGSize collectionViewSize = CGSizeMake(collectionWidth, collectionWidth);
     return collectionViewSize;
 }
 
-#pragma mark -
-#pragma mark  动态改变标题文字
-#pragma mark -
+#pragma mark - AssetCellViewDelegate -
 
+- (void)didSelectedAssetCell:(UZUIAssetsViewCell *)cell withSelected:(BOOL)select {
+    NSIndexPath *indexPath = [self.collectionView indexPathForCell:cell];
+    if (select) {
+        if (![self max:self.assetsArrSelected]) {
+            [cell.selectBtn setSelected:NO];
+            return;
+        }
+        NSInteger index = indexPath.item;
+        ALAsset *asset = [self.allAssetsAry objectAtIndex:index];
+        if ([self.assetsArrSelected containsObject:asset]) {
+            return;
+        }
+        [self.assetsArrSelected addObject:asset];
+        [self.selectedState setObject:[NSNumber numberWithBool:YES] forKey:indexPath];
+        [self setTitleWithSelectedIndexPaths:self.assetsArrSelected];
+    } else {
+        ALAsset *asset = [self.allAssetsAry objectAtIndex:indexPath.item];
+        [self.assetsArrSelected removeObject:asset];
+        [self.selectedState setObject:[NSNumber numberWithBool:NO] forKey:indexPath];
+        [self setTitleWithSelectedIndexPaths:self.assetsArrSelected];
+    }
+}
+
+#pragma mark - helper -
+
+#pragma mark 动态改变标题文字
 - (void)setTitleWithSelectedIndexPaths:(NSArray *)assets {
     if (assets.count == 0){
         NSDictionary *stateInfo = [self.paramsDict dictValueForKey:@"texts" defaultValue:@{}];
@@ -489,11 +542,7 @@
         self.title = st;
     }
 }
-
-#pragma mark -
-#pragma mark  最多选择几张照片
-#pragma mark -
-
+#pragma mark 最多选择几张照片
 - (BOOL)max:(NSArray *)indexPaths {
     NSInteger selectedMax = [self.paramsDict integerValueForKey:@"max" defaultValue:-1];
     if ((indexPaths.count+1) > selectedMax){
@@ -504,13 +553,49 @@
         return true;
     }
 }
-
-#pragma mark -
-#pragma mark  完成、取消按钮事件
-#pragma mark -
-
-- (void)done {
-    NSMutableArray *listMutableArr = [[NSMutableArray alloc] init];
+#pragma mark 取消按钮事件
+- (void)cancel {
+    [self dismissViewControllerAnimated:YES completion:^(void) {
+        if ([self.delegate respondsToSelector:@selector(callBack:)]) {
+            [self.delegate callBack:@{@"eventType" : @"cancel"}];
+        }
+        self.delegate = nil;
+    }];
+}
+#pragma mark 预览按钮事件
+- (void)preview:(NSInteger)index {
+    if (self.showBrowser) {// 模块开启预览
+        didShowPreview = YES;
+        PrivewViewController *pvVC = [[PrivewViewController alloc]init];
+        pvVC.index = index;
+        pvVC.allSelectedAry = self.assetsArrSelected;
+        pvVC.comBlock = ^(){
+            [self done:YES];
+        };
+        [self.navigationController pushViewController:pvVC animated:YES];
+    }
+    if (self.showPreview) {//返回预览事件
+        NSMutableArray *listMutableArr = [self getSelectedInfo];
+        if ([self.delegate respondsToSelector:@selector(previewCallback:)]) {
+            [self.delegate previewCallback:@{@"list" : listMutableArr, @"eventType" : @"preview"}];
+        }
+    }
+}
+#pragma mark 完成按钮事件
+- (void)done:(BOOL)isPreview {
+    NSMutableArray *listMutableArr = [self getSelectedInfo];
+    [self dismissViewControllerAnimated:YES completion:^(void){
+        //返回选中的资源的信息
+        if ([self.delegate respondsToSelector:@selector(callBack:)]) {
+            [self.delegate callBack:@{@"list" : listMutableArr, @"eventType" : @"confirm"}];
+        }
+        self.delegate = nil;
+    }];
+}
+#pragma mark 提取选中图片信息
+- (NSMutableArray *)getSelectedInfo {
+    NSMutableArray *listMutableArr = [NSMutableArray array];
+    //遍历读取选中的图片信息
     for (ALAsset *asset in self.assetsArrSelected) {
         //资源类型  PNG MOV JPG      //  IMG_0133.JPG
         NSString *filename = asset.defaultRepresentation.filename;
@@ -526,7 +611,7 @@
         UIImage *image = [UIImage imageWithCGImage:asset.thumbnail];
         NSString *type  = [asset valueForProperty:ALAssetPropertyType];
         NSFileManager *fileManager = [NSFileManager defaultManager];
-        //存到library/Caches/UIMediaScanner目录下
+        //缩略图存到library/Caches/UIMediaScanner目录下
         NSString *filePath = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/UIMediaScanner"];
         if (![fileManager fileExistsAtPath:filePath]) {
             [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
@@ -537,31 +622,35 @@
         } else {
             data = UIImagePNGRepresentation(image);
         }
-         NSString *imgPath;
-         if ([type isEqualToString:ALAssetTypeVideo]) {
-         NSRange ran = [filename rangeOfString:@"."];
-             filename= [filename substringWithRange:NSMakeRange(0, ran.location+1)];
-             imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@%@",filename,@"png"]];
-         } else {
-             imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@",filename]];
-         }
-         UIImage *img = [UIImage imageWithContentsOfFile:imgPath];
-         if (!img) {
-             NSData *data;
-             if (UIImagePNGRepresentation(image) == nil) {
-                 data = UIImageJPEGRepresentation(image, 1);
-             } else {
-                 data = UIImagePNGRepresentation(image);
-             }
-             //创建文件
-             if (data) {
-                 if ([type isEqualToString:ALAssetTypeVideo]) {
-                     NSRange ran = [filename rangeOfString:@"."];
-                     filename= [filename substringWithRange:NSMakeRange(0, ran.location+1)];
-                     [fileManager createFileAtPath:imgPath contents:data attributes:nil];
-                 } else {
-                     [fileManager createFileAtPath:imgPath contents:data attributes:nil];
-                 }
+        NSString *imgPath;
+        double seconds = -1;
+        if ([type isEqualToString:ALAssetTypeVideo]) {//视频资源
+            NSRange ran = [filename rangeOfString:@"."];
+            filename= [filename substringWithRange:NSMakeRange(0, ran.location+1)];
+            imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@%@",filename,@"png"]];
+            AVURLAsset *asset = [AVURLAsset assetWithURL:assetUrls];
+            CMTime   time = [asset duration];
+            seconds = ceil(time.value/time.timescale);
+        } else {//图片资源
+            imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@",filename]];
+        }
+        UIImage *img = [UIImage imageWithContentsOfFile:imgPath];
+        if (!img) {
+            NSData *data;
+            if (UIImagePNGRepresentation(image) == nil) {
+                data = UIImageJPEGRepresentation(image, 1);
+            } else {
+                data = UIImagePNGRepresentation(image);
+            }
+            //创建文件
+            if (data) {
+                if ([type isEqualToString:ALAssetTypeVideo]) {
+                    NSRange ran = [filename rangeOfString:@"."];
+                    filename= [filename substringWithRange:NSMakeRange(0, ran.location+1)];
+                    [fileManager createFileAtPath:imgPath contents:data attributes:nil];
+                } else {
+                    [fileManager createFileAtPath:imgPath contents:data attributes:nil];
+                }
             }
         }
         //根据路径得到URL
@@ -570,37 +659,11 @@
         NSNumber *size = [NSNumber numberWithLongLong:asset.defaultRepresentation.size];
         if (asset && assetUrls && size && asset.thumbnail) {
             NSString *asUrl = [assetUrls absoluteString];
-            NSDictionary *dic = [[NSDictionary alloc] initWithObjectsAndKeys:asUrl,@"path",[thumbUrl absoluteString],@"thumbPath",mimeType,@"suffix",size,@"size",strDate,@"time", nil];
+            NSDictionary *dic = [[NSDictionary alloc] initWithObjectsAndKeys:asUrl,@"path",[thumbUrl absoluteString],@"thumbPath",mimeType,@"suffix",size,@"size",strDate,@"time",@(seconds),@"duration", nil];
             [listMutableArr addObject:dic];
         }
     }
-    [self dismissViewControllerAnimated:YES completion:^(void){
-        //返回选中的资源的字典
-        if ([self.delegate respondsToSelector:@selector(callBack:)]) {
-            [self.delegate callBack:[NSMutableDictionary dictionaryWithObject:listMutableArr forKey:@"list"]];
-        }
-        self.delegate = nil;
-    }];
+    return listMutableArr;
 }
-
-- (void)cancel {
-    [self dismissViewControllerAnimated:YES completion:^(void){
-        self.delegate = nil;
-    }];
-}
-
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    [alertView dismissWithClickedButtonIndex:buttonIndex animated:YES];
-}
-
-+ (ALAssetsLibrary *)defaultAssetsLibrary {
-    static dispatch_once_t pred = 0;
-    static ALAssetsLibrary *library = nil;
-    dispatch_once(&pred, ^{
-        library = [[ALAssetsLibrary alloc] init];
-    });
-    return library;
-}
-
 @end
 

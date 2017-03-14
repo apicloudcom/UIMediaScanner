@@ -19,7 +19,7 @@
 @property (nonatomic, strong) NSMutableArray *groups;
 @property (nonatomic, strong) NSDictionary *paramsDict;
 @property (nonatomic, weak) id <AssetsViewCallBack> delegate;
-@property (nonatomic, assign) BOOL isClassify;
+@property (nonatomic, assign) BOOL isClassify, showPreview, showBrowser;
 
 - (id)initWithDict:(NSDictionary *)params;
 
@@ -28,6 +28,7 @@
 @protocol AssetsViewCallBack
 <NSObject>
 
+- (void)previewCallback:(NSDictionary *)listDict;
 - (void)callBack:(NSDictionary *)listDict;
 - (NSString *)getPath:(NSString *)path;
 

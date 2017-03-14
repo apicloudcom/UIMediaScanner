@@ -14,6 +14,9 @@
 #import "UZUIAssetsGroupViewController.h"
 #import "UZUIAssetNavigationController.h"
 #import <CommonCrypto/CommonDigest.h>
+#import <AVFoundation/AVFoundation.h>
+#import <objc/runtime.h>
+#import <Photos/Photos.h>
 
 @interface UZUIMediaScanner ()
 <AssetsViewCallBack> {
@@ -37,6 +40,7 @@
 
 static int fetchPosition = 0;
 //static UIImage *imageTrasn = nil;
+static char extendKey;
 
 #pragma mark -
 #pragma mark  lifeCycle
@@ -85,7 +89,12 @@ static int fetchPosition = 0;
     CGFloat thumbW = [thumbSizeInfo floatValueForKey:@"w" defaultValue:100.0];
     CGFloat thumbH = [thumbSizeInfo floatValueForKey:@"h" defaultValue:100.0];
     thumbSize = CGSizeMake(thumbW, thumbH);
-    [NSThread detachNewThreadSelector:@selector(loadDataSource:) toTarget:self withObject:nil];
+    BOOL showGroup = [paramsDict_ boolValueForKey:@"showGroup" defaultValue:NO];
+    if (showGroup) {
+        [NSThread detachNewThreadSelector:@selector(loadDataSourceInGroup:) toTarget:self withObject:nil];
+    } else {
+        [NSThread detachNewThreadSelector:@selector(loadDataSource:) toTarget:self withObject:nil];
+    }
 }
 
 - (void)fetch:(NSDictionary *)paramsDict_ {
@@ -106,6 +115,16 @@ static int fetchPosition = 0;
     if (path.length == 0) {
         return;
     }
+    //创建NSBlockOperation 来执行每一次转换，图片复制等耗时操作
+    NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
+        NSString *locStr = [self localPathForAssetLibraryPath:path];
+        //回到主线程
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self sendResultEventWithCallbackId:transCbId dataDict:[NSDictionary dictionaryWithObjectsAndKeys:locStr,@"path", nil] errDict:nil doDelete:YES];
+        });
+    }];
+    [self.transPathQueue addOperation:operation];
+    /*
     NSURL *url = [[NSURL alloc] initWithString:path];
     //__block UIImage *imageAss = nil;
     __weak UZUIMediaScanner *wealSelf = self;
@@ -113,8 +132,8 @@ static int fetchPosition = 0;
         //创建NSBlockOperation 来执行每一次转换，图片复制等耗时操作
         NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
             UIImage *imageTrasn = [UIImage imageWithCGImage:myasset.defaultRepresentation.fullResolutionImage
-                                                                                                                             scale:myasset.defaultRepresentation.scale
-                                                                                                                       orientation:(UIImageOrientation)myasset.defaultRepresentation.orientation];
+                                                                                   scale:myasset.defaultRepresentation.scale
+                                                                          orientation:(UIImageOrientation)myasset.defaultRepresentation.orientation];
             imageTrasn = [self imageCorrectedForCaptureOrientation:imageTrasn UIImageOrientation:imageTrasn.imageOrientation];
             [wealSelf save:imageTrasn imagePath:path cbId:transCbId];
         }];
@@ -126,35 +145,58 @@ static int fetchPosition = 0;
     ALAssetsLibrary *assetsLibrary;
     assetsLibrary = [self.class defaultAssetsLibrary];
     [assetsLibrary assetForURL:url resultBlock:resultblock failureBlock:failureblock];
-
-    /*
-    //创建NSBlockOperation 来执行每一次转换，图片复制等耗时操作
-    NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
-        NSURL *url = [[NSURL alloc] initWithString:path];
-        //__block UIImage *imageAss = nil;
-        ALAssetsLibraryAssetForURLResultBlock resultblock = ^(ALAsset *myasset) {
-            NSLog(@"读取相册图片%d",transCount);
-            UIImage *imageTrasn = [UIImage imageWithCGImage:myasset.defaultRepresentation.fullResolutionImage
-                                           scale:myasset.defaultRepresentation.scale
-                                     orientation:(UIImageOrientation)myasset.defaultRepresentation.orientation];
-            //imageTrasn = [self imageCorrectedForCaptureOrientation:imageTrasn UIImageOrientation:imageTrasn.imageOrientation];
-            [self save:imageTrasn imagePath:path cbId:transCbId];
-            transCount ++;
-        };
-        ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror) {
-            NSLog(@"Turbo_UIMediascanner_cant get image - %@",[myerror localizedDescription]);
-        };
-        ALAssetsLibrary *assetsLibrary;
-        assetsLibrary = [self.class defaultAssetsLibrary];
-        [assetsLibrary assetForURL:url resultBlock:resultblock failureBlock:failureblock];
-    }];
-    [self.transPathQueue addOperation:operation];
      */
+}
+
+- (void)getVideoDuration:(NSDictionary *)paramsDict_ {
+    NSString *path = [paramsDict_ stringValueForKey:@"path" defaultValue:@""];
+    NSInteger duratinCbId = [paramsDict_ integerValueForKey:@"cbId" defaultValue:-1];
+    if ([path containsString:@"fs://"] || [path containsString:@"widget://"]) {
+        path = [self getPathWithUZSchemeURL:path];
+        NSURL *url = [NSURL fileURLWithPath:path];
+        if (!url) return;
+        AVURLAsset * asset = [AVURLAsset assetWithURL:url];
+        CMTime time = [asset duration];
+        int duration = ceil(time.value / (float)time.timescale);
+        if (duration) {
+            [self sendResultEventWithCallbackId:duratinCbId dataDict:@{@"duration" : @(duration)} errDict:nil doDelete:YES];
+        }
+    }else {
+        ALAssetsLibrary *assetsLibrary = [UZUIAssetsGroupViewController defaultAssetsLibrary];
+        __weak typeof(self) weakSelf = self;
+        ALAssetsLibraryGroupsEnumerationResultsBlock resultsBlock = ^(ALAssetsGroup *group, BOOL *stop) {
+            if (group) {
+                [group enumerateAssetsUsingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
+                    if ([result.defaultRepresentation.url.absoluteString isEqualToString:path]) {
+                        int duration = ceil([[result valueForProperty:ALAssetPropertyDuration] doubleValue]);
+                        if (duration) {
+                            [weakSelf sendResultEventWithCallbackId:duratinCbId dataDict:@{@"duration" : @(duration)} errDict:nil doDelete:YES];
+                        }
+                        stop = (BOOL *)YES;
+                    }
+                }];
+            } else {
+                stop = (BOOL *)YES;
+            }
+        };
+        ALAssetsLibraryAccessFailureBlock failureBlock = ^(NSError *error) {
+        };
+        [assetsLibrary enumerateGroupsWithTypes:ALAssetsGroupAll
+                                     usingBlock:resultsBlock
+                                   failureBlock:failureBlock];
+    }
 }
 
 #pragma mark -
 #pragma mark  AssetsViewCallBackDelegate
 #pragma mark -
+
+- (void)previewCallback:(NSDictionary *)listDict {
+    if (cbOpenId != -1) {
+        NSDictionary *sendDict = [[NSDictionary alloc]initWithDictionary:listDict];
+        [self sendResultEventWithCallbackId:cbOpenId dataDict:sendDict errDict:nil doDelete:NO];
+    }
+}
 
 - (void)callBack:(NSDictionary *)listDict {
     if (cbOpenId != -1) {
@@ -181,16 +223,17 @@ static int fetchPosition = 0;
         [assetsLibrary enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
             [group enumerateAssetsUsingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
                 NSString *type = [result valueForProperty:ALAssetPropertyType];
-                ALAsset *result2 = result;
                 if (result != nil) {
-                    [all addObject:result2];
-                    if ([type isEqual:ALAssetTypePhoto]) {
-                        [pic addObject:result2];
+                    if (![all containsObject:result]) {
+                        [all addObject:result];
                     }
-                    if ([type isEqual:ALAssetTypeVideo]) {
-                        [vid addObject:result2];
+                    if ([type isEqual:ALAssetTypePhoto] && ![pic containsObject:result]) {
+                        [pic addObject:result];
                     }
-                } else {
+                    if ([type isEqual:ALAssetTypeVideo] && ![vid containsObject:result]) {
+                        [vid addObject:result];
+                    }
+                } else  {
                     NSString *type = [_scanDict stringValueForKey:@"type" defaultValue:@"all"];
                     NSArray *arr;
                     if ([type isEqualToString:@"all"]) {
@@ -207,6 +250,50 @@ static int fetchPosition = 0;
                         [self.assets addObject:asset];
                     }
                     [self sortDataSource:nil];
+                }
+            }];
+        } failureBlock:^(NSError *error) {
+            NSLog(@"Turbo___mediaScanner__error:%@",error);
+        }];
+    }
+}
+
+- (void)loadDataSourceInGroup:(NSString *)path {//加载本地相册里的数据
+    @autoreleasepool {
+        _allAry = [NSMutableArray array];
+        _picAry = [NSMutableArray array];
+        _vidAry = [NSMutableArray array];
+        ALAssetsLibrary *assetsLibrary;
+        assetsLibrary = [self.class defaultAssetsLibrary];
+        [assetsLibrary enumerateGroupsWithTypes:ALAssetsGroupAll usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
+            if (!group) {
+                NSString *type = [_scanDict stringValueForKey:@"type" defaultValue:@"all"];
+                NSArray *arr;
+                if ([type isEqualToString:@"all"]) {
+                    arr = _allAry;
+                } else if ([type isEqualToString:@"picture"]) {
+                    arr = _picAry;
+                } else if ([type isEqualToString:@"video"]) {
+                    arr = _vidAry;
+                }
+                for (ALAsset *asset in arr) {
+                    [self.assets addObject:asset];
+                }
+                [self sortDataSource:nil];
+            }
+            NSString *groupname = [group valueForProperty:ALAssetsGroupPropertyName];
+            [group enumerateAssetsUsingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
+                NSString *type = [result valueForProperty:ALAssetPropertyType];
+                if (result) {
+                    //扩展属性
+                    objc_setAssociatedObject(result, &extendKey, groupname, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                    [_allAry addObject:result];
+                    if ([type isEqual:ALAssetTypePhoto]) {
+                        [_picAry addObject:result];
+                    }
+                    if ([type isEqual:ALAssetTypeVideo]) {
+                        [_vidAry addObject:result];
+                    }
                 }
             }];
         } failureBlock:^(NSError *error) {
@@ -287,14 +374,15 @@ static int fetchPosition = 0;
         //资源缩略图URL
         UIImage *image = [UIImage imageWithCGImage:result.thumbnail];
         image = [self setNewSizeWithOriginImage:image toSize:thumbSize];
+        //创建存放缩略图的文件
         NSString *imagePath = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSString *filePath = [imagePath  stringByAppendingPathComponent:@"UIMediaScanner"];
         if (![fileManager fileExistsAtPath:imagePath]) {
             [fileManager createDirectoryAtPath:imagePath withIntermediateDirectories:YES attributes:nil error:nil];
         }
-        //创建路径
         [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
+        //建缩略图路径
         NSString *type  = [result valueForProperty:ALAssetPropertyType];
         NSString *imgPath;
         if ([type isEqualToString:ALAssetTypeVideo]) {
@@ -304,6 +392,7 @@ static int fetchPosition = 0;
         } else {
             imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@",filename]];
         }
+        //将缩略图写入上步中创建的路径
         UIImage *img = [UIImage imageWithContentsOfFile:imgPath];
         if (!img) {
             NSData *data;
@@ -312,7 +401,6 @@ static int fetchPosition = 0;
             } else {
                 data = UIImagePNGRepresentation(image);
             }
-            //创建文件
             if (data) {
                 if ([type isEqualToString:ALAssetTypeVideo]) {
                     NSRange ran = [filename rangeOfString:@"."];
@@ -331,11 +419,26 @@ static int fetchPosition = 0;
             NSString *temp = [assetUrls absoluteString];
             NSString *temp1 = [thumbUrl absoluteString];
             NSMutableDictionary * ttt =[NSMutableDictionary dictionaryWithCapacity:3];
-            [ttt setObject:temp forKey:@"path"];
-            [ttt setObject:temp1 forKey:@"thumbPath"];
-            [ttt setObject:mimeType forKey:@"suffix"];
-            [ttt setObject:size forKey:@"size"];
-            [ttt setObject:strDate forKey:@"time"];
+            
+            if ([temp isKindOfClass:[NSString class]] && temp.length>0) {
+                [ttt setObject:temp forKey:@"path"];
+            }
+            if ([temp1 isKindOfClass:[NSString class]] && temp1.length>0) {
+                [ttt setObject:temp1 forKey:@"thumbPath"];
+            }
+            if ([mimeType isKindOfClass:[NSString class]] && mimeType.length>0) {
+                [ttt setObject:mimeType forKey:@"suffix"];
+            }
+            if (size) {
+                [ttt setObject:size forKey:@"size"];
+            }
+            if ([strDate isKindOfClass:[NSString class]] && strDate.length>0) {
+                [ttt setObject:strDate forKey:@"time"];
+            }
+            NSString *associatedGroupName = (NSString *)objc_getAssociatedObject(result, &extendKey);
+            if ([associatedGroupName isKindOfClass:[NSString class]] && associatedGroupName.length>0) {
+                [ttt setObject:associatedGroupName forKey:@"groupName"];
+            }
             [callBackArr addObject:ttt];
         }
     }
@@ -380,13 +483,14 @@ static int fetchPosition = 0;
         UIImage *image = [UIImage imageWithCGImage:result.thumbnail];
         image = [self setNewSizeWithOriginImage:image toSize:thumbSize];
         NSString *imagePath = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
+        //创建存放缩略图的文件
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSString *filePath = [imagePath  stringByAppendingPathComponent:@"UIMediaScanner"];
         if (![fileManager fileExistsAtPath:imagePath]) {
             [fileManager createDirectoryAtPath:imagePath withIntermediateDirectories:YES attributes:nil error:nil];
         }
-        //创建路径
         [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
+        //建缩略图路径
         NSString *type  = [result valueForProperty:ALAssetPropertyType];
         NSString *imgPath;
         if ([type isEqualToString:ALAssetTypeVideo]) {
@@ -396,6 +500,7 @@ static int fetchPosition = 0;
         } else {
             imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@",filename]];
         }
+        //将缩略图写入上步中创建的路径
         UIImage *img = [UIImage imageWithContentsOfFile:imgPath];
         if (!img) {
             NSData *data;
@@ -404,7 +509,6 @@ static int fetchPosition = 0;
             } else {
                 data = UIImagePNGRepresentation(image);
             }
-            //创建文件
             if (data) {
                 if ([type isEqualToString:ALAssetTypeVideo]) {
                     NSRange ran = [filename rangeOfString:@"."];
@@ -418,14 +522,28 @@ static int fetchPosition = 0;
    
         //资源-照片大小   单位：Bytes
         NSNumber *size = [NSNumber numberWithLongLong:result.defaultRepresentation.size];
-        if (result && assetUrls && size && result.thumbnail && imgPath) {
+        if (result && assetUrls && result.thumbnail && imgPath) {
             NSString *temp = [assetUrls absoluteString];
             NSMutableDictionary * ttt =[NSMutableDictionary dictionaryWithCapacity:3];
-            [ttt setObject:temp forKey:@"path"];
-            [ttt setObject:imgPath forKey:@"thumbPath"];
-            [ttt setObject:mimeType forKey:@"suffix"];
-            [ttt setObject:size forKey:@"size"];
-            [ttt setObject:strDate forKey:@"time"];
+            if ([temp isKindOfClass:[NSString class]] && temp.length>0) {
+                [ttt setObject:temp forKey:@"path"];
+            }
+            if ([imgPath isKindOfClass:[NSString class]] && imgPath.length>0) {
+                [ttt setObject:imgPath forKey:@"thumbPath"];
+            }
+            if ([mimeType isKindOfClass:[NSString class]] && mimeType.length>0) {
+                [ttt setObject:mimeType forKey:@"suffix"];
+            }
+            if (size) {
+                [ttt setObject:size forKey:@"size"];
+            }
+            if ([strDate isKindOfClass:[NSString class]] && strDate.length>0) {
+                [ttt setObject:strDate forKey:@"time"];
+            }
+            NSString *associatedGroupName = (NSString *)objc_getAssociatedObject(result, &extendKey);
+            if ([associatedGroupName isKindOfClass:[NSString class]] && associatedGroupName.length>0) {
+                [ttt setObject:associatedGroupName forKey:@"groupName"];
+            }
             [_cBAll addObject:ttt];
         }
     }
@@ -459,36 +577,27 @@ static int fetchPosition = 0;
     return library;
 }
 
-- (void)save:(UIImage *)img imagePath:(NSString *)path cbId:(NSInteger)cbId {//保存指定图片到临时位置并回调改位置路径
-    UIImage *saveImg = img;
-    /*
-    NSRange ran2 = [path rangeOfString:@"id="];
-    path = [path substringWithRange:NSMakeRange(ran2.location+3, path.length-ran2.location-3)];
-    NSRange ran = [path rangeOfString:@"&ext="];
-    NSString *name = [path substringToIndex:ran.location];
-    NSString *type = [path substringWithRange:NSMakeRange(ran.location+ran.length, path.length-ran.location-ran.length)];
-     */
-    NSString *name = [self md5:path];
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *filePath = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/UIMediaScanner"];
-    if (![fileManager fileExistsAtPath:filePath]) {        //创建路径
-        [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
-    }
-    NSData *data = UIImagePNGRepresentation(saveImg);
-    NSString *type = @".png";
-    if (!data && data.length==0) {
-        data = UIImageJPEGRepresentation(saveImg, 1);
-        type = @".jpg";
-    }
-    NSString *imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@%@",name,type]];
-    //创建文件
-    if (data) {
-        [fileManager createFileAtPath:imgPath contents:data attributes:nil];
-    }
-    //回到主线程
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self sendResultEventWithCallbackId:cbId dataDict:[NSDictionary dictionaryWithObjectsAndKeys:imgPath,@"path", nil] errDict:nil doDelete:YES];
-    });
+- (NSString *)typeForImageData:(NSString *)data {
+    NSArray *pathSpe = [data componentsSeparatedByString:@"="];
+    NSString *type = [pathSpe lastObject];
+    return [NSString stringWithFormat:@"%@", type];
+    //uint8_t c;
+    //[data getBytes:&c length:1];
+    //switch (c) {
+    //    case 0xFF:
+    //        return @".jpg";
+    //        
+    //    case 0x89:
+    //        return @".png";
+    //        
+    //    case 0x47:
+    //        return @".gif";
+    //        
+    //    case 0x49:
+    //    case 0x4D:
+    //        return @".tiff";
+    //}
+    //return @".png";
 }
 
 - (NSString *)md5:(NSString *)str{
@@ -550,13 +659,17 @@ static int fetchPosition = 0;
     return newImage;
 }
 
-#pragma mark - classify -
+#pragma mark - classify
 
 - (void)classify:(NSDictionary *)paramsDict_ {
     BOOL classifyId = [paramsDict_ integerValueForKey:@"classify" defaultValue:NO];
     BOOL isRotation = [paramsDict_ boolValueForKey:@"rotation" defaultValue:false];
+    BOOL showPreview = [paramsDict_ boolValueForKey:@"showPreview" defaultValue:NO];
+    BOOL showBrowser = [paramsDict_ boolValueForKey:@"showBrowser" defaultValue:NO];
     if (classifyId) {
         UZUIAssetsGroupViewController *assetGroupVc = [[UZUIAssetsGroupViewController alloc]init];
+        assetGroupVc.showBrowser = showBrowser;
+        assetGroupVc.showPreview = showPreview;
         assetGroupVc.paramsDict = paramsDict_;
         assetGroupVc.delegate = self; 
         UZUIAssetNavigationController *assetGroupNavi = [[UZUIAssetNavigationController alloc]initWithRootViewController:assetGroupVc];
@@ -564,14 +677,17 @@ static int fetchPosition = 0;
         [self.viewController presentViewController:assetGroupNavi animated:YES completion:^{}];
     } else {
         UZUIAssetsViewController *assetVC = [[UZUIAssetsViewController alloc] initWithDict:paramsDict_];
+        assetVC.showPreview = showPreview;
+        assetVC.showBrowser = showBrowser;
         assetVC.delegate = self;
+        //[self.viewController.navigationController pushViewController:assetVC animated:YES];
         UZUIAssetNavigationController *navi = [[UZUIAssetNavigationController alloc] initWithRootViewController:assetVC];
         navi.isRotation = isRotation;
         [self.viewController presentViewController:navi animated:YES completion:^{}];
     }
 }
 
-#pragma mark - 修改 thumbnail 大小 -
+#pragma mark - 修改 thumbnail 大小
 
 - (UIImage *)setNewSizeWithOriginImage:(UIImage *)oriImage toSize:(CGSize)newSize {
     UIGraphicsBeginImageContext(newSize);
@@ -581,4 +697,107 @@ static int fetchPosition = 0;
     return newImage;
 }
 
+#pragma mark - AssetsLibrary -
+
+- (void)save:(UIImage *)img imagePath:(NSString *)path cbId:(NSInteger)cbId {//保存指定图片到临时位置并回调改位置路径
+    UIImage *saveImg = img;
+    NSString *name = [self md5:path];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *filePath = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/UIMediaScanner"];
+    if (![fileManager fileExistsAtPath:filePath]) {        //创建路径
+        [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    NSData *data = nil;
+    NSString *type = [self typeForImageData:path];
+    if ([type isEqualToString:@"JPG"]) {
+        data = UIImageJPEGRepresentation(saveImg, 1.0);
+    } else if ([type isEqualToString:@"PNG"]) {
+        data = UIImagePNGRepresentation(saveImg);
+    } else {
+        data = UIImageJPEGRepresentation(saveImg, 1.0);
+    }
+    NSString *imgPath = [filePath stringByAppendingString:[NSString stringWithFormat:@"/%@.%@",name,type]];
+    //创建文件
+    if (data) {
+        [fileManager createFileAtPath:imgPath contents:data attributes:nil];
+    }
+    //回到主线程
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self sendResultEventWithCallbackId:cbId dataDict:[NSDictionary dictionaryWithObjectsAndKeys:imgPath,@"path", nil] errDict:nil doDelete:YES];
+    });
+}
+
+- (NSString *)localPathForAssetLibraryPath:(NSString *)assetsLibraryPath {
+    NSString *localPath = nil;
+    ALAssetRepresentation *assetRepresentation = [self assetRepresentationForPath:assetsLibraryPath];
+    long long size = [assetRepresentation size];
+    if (size > 0) {
+        NSString *fileName = [assetRepresentation filename];
+        
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSString *filePath = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/UIMediaScanner"];
+        if (![fileManager fileExistsAtPath:filePath]) {        //创建路径
+            [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
+        }
+        NSString *name = [self md5:assetsLibraryPath];
+        NSString *mimeType = [[[fileName componentsSeparatedByString:@"."] lastObject] lowercaseString];
+        localPath = [NSString stringWithFormat:@"%@/%@.%@",filePath,name,mimeType];
+        
+        //localPath = [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
+        NSOutputStream *outPutStream = [[NSOutputStream alloc] initToFileAtPath:localPath append:NO];
+        [outPutStream open];
+        
+        NSUInteger partitionSize = 1024*256;
+        NSUInteger mod = size%partitionSize;
+        long long count = size/partitionSize+(mod==0?0:1);
+        for (int i=0; i<count; i++) {
+            Byte buffer[1024*256];
+            NSUInteger length = i==count-1?(mod==0?partitionSize:mod):partitionSize;
+            NSUInteger bufferSize = [assetRepresentation getBytes:buffer fromOffset:i*partitionSize length:length error:nil];
+            
+            if (bufferSize > 0) {
+                [outPutStream write:buffer maxLength:bufferSize];
+            }
+        }
+        [outPutStream close];
+    }
+    return localPath;
+}
+
+- (ALAssetRepresentation *)assetRepresentationForPath:(NSString *)assetsLibraryPath {
+    __block ALAssetRepresentation *assetRepresentation = nil;
+    if ([assetsLibraryPath hasPrefix:@"assets-library://"]) {
+        __block BOOL finished = NO;
+        
+        dispatch_async(dispatch_get_global_queue(0, 0), ^{
+            ALAssetsLibraryAssetForURLResultBlock resultBlock = ^(ALAsset *asset) {
+                if (asset) {
+                    assetRepresentation = [asset defaultRepresentation];
+                }
+                finished = YES;
+            };
+            
+            ALAssetsLibraryAccessFailureBlock failureBlock = ^(NSError *error) {
+                finished = YES;
+            };
+            
+            ALAssetsLibrary *assetsLibrary = [self defaultAssetsLibrary];
+            [assetsLibrary assetForURL:[NSURL URLWithString:assetsLibraryPath] resultBlock:resultBlock failureBlock:failureBlock];
+        });
+        
+        while (!finished) {
+            [[NSRunLoop currentRunLoop] runMode:NSRunLoopCommonModes beforeDate:[NSDate distantFuture]];
+        }
+    }
+    return assetRepresentation;
+}
+
+- (ALAssetsLibrary *)defaultAssetsLibrary {
+    static dispatch_once_t pred = 0;
+    static ALAssetsLibrary *library = nil;
+    dispatch_once(&pred, ^{
+        library = [[ALAssetsLibrary alloc] init];
+    });
+    return library;
+}
 @end

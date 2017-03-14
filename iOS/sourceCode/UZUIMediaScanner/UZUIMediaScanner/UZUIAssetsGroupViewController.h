@@ -16,5 +16,8 @@
 @property (nonatomic, strong) NSMutableArray *groups;
 @property (nonatomic, strong) NSDictionary *paramsDict;
 @property (nonatomic, weak) id<AssetsViewCallBack> delegate;
+@property (nonatomic, assign) BOOL showPreview, showBrowser;
+
++ (ALAssetsLibrary *)defaultAssetsLibrary;
 
 @end

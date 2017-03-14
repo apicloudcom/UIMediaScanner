@@ -32,6 +32,9 @@
 
 - (void)cancelBack {
     [self dismissViewControllerAnimated:YES completion:^(void) {
+        if ([self.delegate respondsToSelector:@selector(callBack:)]) {
+            [self.delegate callBack:@{@"eventType" : @"cancel"}];
+        }
         self.delegate = nil;
     }];
 }
@@ -145,6 +148,8 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     UZUIAssetsViewController *assetVC = [[UZUIAssetsViewController alloc] initWithDict:self.paramsDict];
+    assetVC.showPreview = self.showPreview;
+    assetVC.showBrowser = self.showBrowser;
     assetVC.delegate = self.delegate;
     //将图片分类显示
     assetVC.isClassify = YES;
