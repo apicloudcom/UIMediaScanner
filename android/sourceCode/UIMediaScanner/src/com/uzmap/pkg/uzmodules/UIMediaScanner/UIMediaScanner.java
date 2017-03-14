@@ -23,11 +23,15 @@ import org.json.JSONObject;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.text.TextUtils;
+import android.util.Log;
 
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.uzmap.pkg.uzcore.UZCoreUtil;
 import com.uzmap.pkg.uzcore.UZWebView;
@@ -45,11 +49,14 @@ public class UIMediaScanner extends UZModule {
 
 	public static final String TAG = UIMediaScanner.class.getSimpleName();
 
-	private UZModuleContext mMContext;
+	public static UZModuleContext mMContext;
+
+	public final String EVENT_TYPE_CONFIRM = "confirm";
+	public final String EVENT_TYPE_CANCEL = "cancel";
 
 	public UIMediaScanner(UZWebView webView) {
 		super(webView);
-		CACHE_PATH = mContext.getCacheDir().getAbsolutePath();
+		CACHE_PATH = mContext.getExternalCacheDir().getAbsolutePath();
 	}
 
 	@UzJavascriptMethod
@@ -82,10 +89,19 @@ public class UIMediaScanner extends UZModule {
 			config.rotation = moduleContext.optBoolean("rotation");
 		}
 
+		if (!moduleContext.isNull("showPreview")) {
+			config.showPreview = moduleContext.optBoolean("showPreview");
+		}
+		
+		if (!moduleContext.isNull("showBrowser")) {
+			config.showBrowser = moduleContext.optBoolean("showBrowser");
+		}
+
 		/**
 		 * screen width
 		 */
-		WindowManager wm = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+		WindowManager wm = (WindowManager) getContext().getSystemService(
+				Context.WINDOW_SERVICE);
 		int width = wm.getDefaultDisplay().getWidth();
 
 		config.mark_size = UZCoreUtil.pixToDip(width / config.col / 3);
@@ -94,8 +110,10 @@ public class UIMediaScanner extends UZModule {
 			config.isBounces = moduleContext.optBoolean("bounces");
 		}
 
-		JSONObject scrollToBottomObj = moduleContext.optJSONObject("scrollToBottom");
-		if (scrollToBottomObj != null && !scrollToBottomObj.isNull("intervalTime")) {
+		JSONObject scrollToBottomObj = moduleContext
+				.optJSONObject("scrollToBottom");
+		if (scrollToBottomObj != null
+				&& !scrollToBottomObj.isNull("intervalTime")) {
 			config.intervalTime = scrollToBottomObj.optInt("intervalTime");
 		}
 
@@ -130,13 +148,18 @@ public class UIMediaScanner extends UZModule {
 		if (stylesObj != null) {
 			// bg
 			if (!stylesObj.isNull("bg")) {
-				config.bgColor = UZUtility.parseCssColor(stylesObj.optString("bg"));
+				config.bgColor = UZUtility.parseCssColor(stylesObj
+						.optString("bg"));
 			}
 			// mark
 			JSONObject markObj = stylesObj.optJSONObject("mark");
 			if (markObj != null) {
 				if (!markObj.isNull("position")) {
-					config.mark_position = markObj.optString("position");
+					if (config.showPreview) {
+						config.mark_position = "top_right";
+					} else {
+						config.mark_position = markObj.optString("position");
+					}
 				}
 				if (!markObj.isNull("icon")) {
 					config.mark_icon = makeRealPath(markObj.optString("icon"));
@@ -149,16 +172,19 @@ public class UIMediaScanner extends UZModule {
 			JSONObject navObj = stylesObj.optJSONObject("nav");
 			if (navObj != null) {
 				if (!navObj.isNull("bg")) {
-					Bitmap naviBgBitmap = getBitmap(makeRealPath(navObj.optString("bg")));
+					Bitmap naviBgBitmap = getBitmap(makeRealPath(navObj
+							.optString("bg")));
 					if (naviBgBitmap != null) {
 						ConfigInfo.navBgBitmap = naviBgBitmap;
 					} else {
-						config.navi_bg = UZUtility.parseCssColor(navObj.optString("bg"));
+						config.navi_bg = UZUtility.parseCssColor(navObj
+								.optString("bg"));
 					}
 				}
 
 				if (!navObj.isNull("stateColor")) {
-					config.navi_title_color = UZUtility.parseCssColor(navObj.optString("stateColor"));
+					config.navi_title_color = UZUtility.parseCssColor(navObj
+							.optString("stateColor"));
 				}
 
 				if (!navObj.isNull("stateSize")) {
@@ -166,16 +192,20 @@ public class UIMediaScanner extends UZModule {
 				}
 
 				if (!navObj.isNull("cancleBg")) {
-					Bitmap cancelBgBitmap = getBitmap(makeRealPath(navObj.optString("cancleBg")));
+					Bitmap cancelBgBitmap = getBitmap(makeRealPath(navObj
+							.optString("cancleBg")));
 					if (cancelBgBitmap != null) {
-						ConfigInfo.cancelBgBitmap = getBitmap(makeRealPath(navObj.optString("cancleBg")));
+						ConfigInfo.cancelBgBitmap = getBitmap(makeRealPath(navObj
+								.optString("cancleBg")));
 					} else {
-						config.cancel_bg = UZUtility.parseCssColor(navObj.optString("cancleBg"));
+						config.cancel_bg = UZUtility.parseCssColor(navObj
+								.optString("cancleBg"));
 					}
 				}
 
 				if (!navObj.isNull("cancelColor")) {
-					config.cancel_title_color = UZUtility.parseCssColor(navObj.optString("cancelColor"));
+					config.cancel_title_color = UZUtility.parseCssColor(navObj
+							.optString("cancelColor"));
 				}
 
 				if (!navObj.isNull("cancelSize")) {
@@ -184,16 +214,19 @@ public class UIMediaScanner extends UZModule {
 
 				// finish button setting
 				if (!navObj.isNull("finishBg")) {
-					Bitmap finishBgBitmap = getBitmap(makeRealPath(navObj.optString("finishBg")));
+					Bitmap finishBgBitmap = getBitmap(makeRealPath(navObj
+							.optString("finishBg")));
 					if (finishBgBitmap != null) {
 						ConfigInfo.finishBgBitmap = finishBgBitmap;
 					} else {
-						config.finish_bg = UZUtility.parseCssColor(navObj.optString("finishBg"));
+						config.finish_bg = UZUtility.parseCssColor(navObj
+								.optString("finishBg"));
 					}
 				}
 
 				if (!navObj.isNull("finishColor")) {
-					config.finish_title_color = UZUtility.parseCssColor(navObj.optString("finishColor"));
+					config.finish_title_color = UZUtility.parseCssColor(navObj
+							.optString("finishColor"));
 				}
 
 				if (!navObj.isNull("finishSize")) {
@@ -215,23 +248,23 @@ public class UIMediaScanner extends UZModule {
 	private ArrayList<FileInfo> allScanFileList;
 	private int startIndex = -1;
 	private int fetchCount = -1;
-	
+
 	public int thumbWidth = 100;
 	public int thumbHeight = 100;
 
 	@UzJavascriptMethod
 	public void jsmethod_scan(final UZModuleContext moduleConztext) {
-		
+
 		JSONObject thumbnailObj = moduleConztext.optJSONObject("thumbnail");
-		if(thumbnailObj != null){
-			if(!thumbnailObj.isNull("w")){
+		if (thumbnailObj != null) {
+			if (!thumbnailObj.isNull("w")) {
 				thumbWidth = thumbnailObj.optInt("w");
 			}
-			if(!thumbnailObj.isNull("h")){
+			if (!thumbnailObj.isNull("h")) {
 				thumbHeight = thumbnailObj.optInt("h");
 			}
 		}
-		
+
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -320,8 +353,9 @@ public class UIMediaScanner extends UZModule {
 					subList = allScanFileList.subList(0, count);
 					startIndex = count;
 				}
-				moduleConztext.success(creatRetJSON(subList, true, thumbWidth, thumbHeight), true);
-				
+				moduleConztext.success(
+						creatRetJSON(null, subList, true, thumbWidth,
+								thumbHeight), true);
 			}
 		}).start();
 	}
@@ -347,36 +381,86 @@ public class UIMediaScanner extends UZModule {
 
 				List<FileInfo> subListFileInfo = new ArrayList<FileInfo>();
 				if (startIndex < 0 || fetchCount < 0 || allScanFileList == null) {
-					moduleConztext.success(creatRetJSON(subListFileInfo, false), true);
+					moduleConztext.success(
+							creatRetJSON(null, subListFileInfo, false), true);
 					return;
 				}
 
 				if (startIndex == allScanFileList.size()) {
-					moduleConztext.success(creatRetJSON(subListFileInfo, false), true);
+					moduleConztext.success(
+							creatRetJSON(null, subListFileInfo, false), true);
 					return;
 				}
 
 				if (startIndex + fetchCount >= allScanFileList.size()) {
-					subListFileInfo = allScanFileList.subList(startIndex, allScanFileList.size());
+					subListFileInfo = allScanFileList.subList(startIndex,
+							allScanFileList.size());
 					startIndex = allScanFileList.size();
 				} else {
-					subListFileInfo = allScanFileList.subList(startIndex, startIndex + fetchCount);
+					subListFileInfo = allScanFileList.subList(startIndex,
+							startIndex + fetchCount);
 					startIndex += fetchCount;
 				}
 
 				if (subListFileInfo == null) {
-					moduleConztext.success(creatRetJSON(subListFileInfo, false), true);
+					moduleConztext.success(
+							creatRetJSON(null, subListFileInfo, false), true);
 					return;
 				}
 
-				moduleConztext.success(creatRetJSON(subListFileInfo, false, thumbWidth, thumbHeight), true);
+				moduleConztext.success(
+						creatRetJSON(null, subListFileInfo, false, thumbWidth,
+								thumbHeight), true);
 			}
 		}).start();
 
 	}
 
+	@SuppressLint("NewApi")
+	public void jsmethod_getVideoDuration(UZModuleContext uzContext) {
+		String path = uzContext.optString("path");
+		if (TextUtils.isEmpty(path)) {
+			return;
+		}
+
+		com.uzmap.pkg.uzmodules.UIMediaScanner.FileUtil.FileInfo fileInfo = FileUtil
+				.getRealPath(mContext, uzContext, path);
+		if (fileInfo == null) {
+			return;
+		}
+
+		MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+		if (fileInfo.isAssert) {
+			AssetFileDescriptor assetFd;
+			try {
+				assetFd = mContext.getAssets().openFd(fileInfo.filePath);
+				retriever.setDataSource(assetFd.getFileDescriptor(),
+						assetFd.getStartOffset(), assetFd.getLength());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+		} else {
+			retriever.setDataSource(path);
+		}
+		String duration = retriever
+				.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+		callback(uzContext, Long.valueOf(duration));
+	}
+
+	public void callback(UZModuleContext uzContext, long duration) {
+		JSONObject ret = new JSONObject();
+		try {
+			ret.put("duration", duration);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		uzContext.success(ret, false);
+	}
+
 	@SuppressLint("SimpleDateFormat")
-	private SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private SimpleDateFormat dataFormat = new SimpleDateFormat(
+			"yyyy-MM-dd HH:mm:ss");
 
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -384,34 +468,55 @@ public class UIMediaScanner extends UZModule {
 			return;
 		}
 		@SuppressWarnings("unchecked")
-		ArrayList<FileInfo> filelist = (ArrayList<FileInfo>) data.getSerializableExtra("files");
+		ArrayList<FileInfo> filelist = (ArrayList<FileInfo>) data
+				.getSerializableExtra("files");
 
 		if (filelist != null) {
-			mMContext.success(creatRetJSON(filelist, false), true);
+			mMContext.success(
+					creatRetJSON(EVENT_TYPE_CONFIRM, filelist, false), true);
+		} else {
+			cancelCallback(mMContext);
 		}
 	}
 
+	public void cancelCallback(UZModuleContext uzContext) {
+		JSONObject ret = new JSONObject();
+		try {
+			ret.put("eventType", EVENT_TYPE_CANCEL);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		uzContext.success(ret, false);
+	}
+
 	// create thumbnail image
-	// public static final String SDCARD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
-	// public static final String THUMBNAIL_SAVE_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/thumbnails_for_me";
+	// public static final String SDCARD_PATH =
+	// Environment.getExternalStorageDirectory().getAbsolutePath();
+	// public static final String THUMBNAIL_SAVE_PATH =
+	// Environment.getExternalStorageDirectory().getAbsolutePath() +
+	// "/DCIM/thumbnails_for_me";
 
 	public static String CACHE_PATH;
-	
+
 	public String createThumbPath(String orgPath, int width, int height) {
 
 		int degree = BitmapToolkit.readPictureDegree(orgPath);
-		
-// 		Bitmap srcBitmap = BitmapFactory.decodeFile(orgPath);
-//		if (srcBitmap == null) {
-//			return null;
-//		}
-		
-		Bitmap createdBitmap = Util.decodeSampledBitmapFromFile(orgPath, width, height);// ThumbnailUtils.extractThumbnail(srcBitmap, width, height);
+
+		// Bitmap srcBitmap = BitmapFactory.decodeFile(orgPath);
+		// if (srcBitmap == null) {
+		// return null;
+		// }
+
+		Bitmap createdBitmap = Util.decodeSampledBitmapFromFile(orgPath, width,
+				height);// ThumbnailUtils.extractThumbnail(srcBitmap, width,
+						// height);
 		if (degree != 0) {
-			createdBitmap = BitmapToolkit.rotaingImageView(degree, createdBitmap);
+			createdBitmap = BitmapToolkit.rotaingImageView(degree,
+					createdBitmap);
 		}
 
-		String realPathStr = CACHE_PATH + "/thumbnails_for_me";
+		String realPathStr = CACHE_PATH + "/.thumbnails_for_me";
 		File realPath = new File(realPathStr);
 		if (!realPath.exists()) {
 			realPath.mkdirs();
@@ -429,33 +534,38 @@ public class UIMediaScanner extends UZModule {
 		}
 		return imagePath.getAbsolutePath();
 	}
-	
-	public JSONObject creatRetJSON(List<FileInfo> list, boolean isScan) {
-		return creatRetJSON(list, isScan, 157, 157);
+
+	public JSONObject creatRetJSON(String eventType, List<FileInfo> list,
+			boolean isScan) {
+		return creatRetJSON(eventType, list, isScan, 157, 157);
 	}
 
-	public JSONObject creatRetJSON(List<FileInfo> list, boolean isScan, int thumbNailWidth, int thumbNailHeight) {
+	public JSONObject creatRetJSON(String eventType, List<FileInfo> list,
+			boolean isScan, int thumbNailWidth, int thumbNailHeight) {
 
 		JSONObject retJSON = new JSONObject();
 		JSONArray array = new JSONArray();
-		
+
 		try {
 			for (int i = 0; i < list.size(); i++) {
 				JSONObject obj = new JSONObject();
 				obj.put("path", list.get(i).path);
 
-				if (!TextUtils.isEmpty(list.get(i).thumbImgPath) && new File(list.get(i).thumbImgPath).exists()) {
+				if (!TextUtils.isEmpty(list.get(i).thumbImgPath)
+						&& new File(list.get(i).thumbImgPath).exists()) {
 					obj.put("thumbPath", list.get(i).thumbImgPath);
 				} else {
 
-					String realPathStr = CACHE_PATH + "/thumbnails_for_me";
+					String realPathStr = CACHE_PATH + "/.thumbnails_for_me";
 					File realPath = new File(realPathStr);
-					File imagePath = new File(realPath, Util.stringToMD5(list.get(i).path) + ".jpg");
+					File imagePath = new File(realPath, Util.stringToMD5(list
+							.get(i).path) + ".jpg");
 
 					if (imagePath.exists()) {
 						obj.put("thumbPath", imagePath.getAbsolutePath());
 					} else {
-						String tmpPath = createThumbPath(list.get(i).path, thumbNailWidth, thumbNailHeight);
+						String tmpPath = createThumbPath(list.get(i).path,
+								thumbNailWidth, thumbNailHeight);
 						if (!TextUtils.isEmpty(tmpPath)) {
 							obj.put("thumbPath", tmpPath);
 						}
@@ -471,25 +581,25 @@ public class UIMediaScanner extends UZModule {
 				if (mimeType != null && mimeType.startsWith("video")) {
 					suffix = mimeType.replace("video/", "");
 
-					if (TextUtils.isEmpty(list.get(i).thumbImgPath) || !new File(list.get(i).thumbImgPath).exists()) {
+					if (TextUtils.isEmpty(list.get(i).thumbImgPath)
+							|| !new File(list.get(i).thumbImgPath).exists()) {
 
-						String realPathStr = CACHE_PATH + "/thumbnails_for_me";
+						String realPathStr = CACHE_PATH + "/.thumbnails_for_me";
 						File realPath = new File(realPathStr);
 						if (!realPath.exists()) {
 							realPath.mkdirs();
 						}
-						File imagePath = new File(realPath, Util.stringToMD5(list.get(i).path) + ".jpg");
+						File imagePath = new File(realPath,
+								Util.stringToMD5(list.get(i).path) + ".jpg");
 
 						if (imagePath.exists()) {
 							obj.put("thumbPath", imagePath);
 						} else {
-
-							Bitmap videoThumb = Util.createVideoThumbnail(list.get(i).path);
+							Bitmap videoThumb = Util.createVideoThumbnail(list
+									.get(i).path);
 							Util.saveBitmap(list.get(i).path, videoThumb);
-
 							obj.put("thumbPath", imagePath);
 						}
-
 					}
 				}
 
@@ -499,6 +609,7 @@ public class UIMediaScanner extends UZModule {
 
 				obj.put("suffix", suffix);
 				obj.put("size", list.get(i).size);
+				obj.put("groupName", list.get(i).groupName);
 
 				String timeStr = dataFormat.format(new Date(list.get(i).time));
 				obj.put("time", timeStr);
@@ -517,6 +628,13 @@ public class UIMediaScanner extends UZModule {
 			retJSON.put("list", array);
 		} catch (JSONException e) {
 			e.printStackTrace();
+		}
+		if (!TextUtils.isEmpty(eventType)) {
+			try {
+				retJSON.put("eventType", eventType);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
 		}
 		return retJSON;
 	}
@@ -546,7 +664,7 @@ public class UIMediaScanner extends UZModule {
 	@Override
 	protected void onClean() {
 		super.onClean();
-		
+
 		ConfigInfo.cancelBgBitmap = null;
 		ConfigInfo.finishBgBitmap = null;
 		ConfigInfo.navBgBitmap = null;

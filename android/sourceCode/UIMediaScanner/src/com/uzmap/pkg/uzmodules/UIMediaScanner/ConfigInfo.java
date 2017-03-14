@@ -79,4 +79,6 @@ public class ConfigInfo implements Serializable {
 	public int intervalTime = -1;
 	public boolean exchange = false;
 	
+	public boolean showPreview = false;
+	public boolean showBrowser = false;
 }

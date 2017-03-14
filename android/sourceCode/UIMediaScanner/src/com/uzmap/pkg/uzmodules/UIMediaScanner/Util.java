@@ -62,7 +62,6 @@ public class Util {
 			String[] str;
 
 			for (int i = 0; i < allimglist.size(); i++) {
-
 				FileInfo fileInfo = allimglist.get(i);
 				if (fileInfo != null) {
 					retulist.add(getfileinfo(fileInfo.path));
@@ -84,7 +83,9 @@ public class Util {
 			for (int i = 0; i < data.size(); i++) {
 				for (int j = 0; j < allimglist.size(); j++) {
 					FileInfo fileInfo = allimglist.get(j);
-					if (fileInfo != null && data.get(i).filename.equals(getfileinfo(fileInfo.path))) {
+					if (fileInfo != null
+							&& data.get(i).filename
+									.equals(getfileinfo(fileInfo.path))) {
 						data.get(i).filecontent.add(fileInfo.path);
 						data.get(i).fileInfos.add(fileInfo);
 					}
@@ -100,11 +101,16 @@ public class Util {
 		ArrayList<FileInfo> list = new ArrayList<FileInfo>();
 
 		if ((filterType | IMAGE_TYPE) == IMAGE_TYPE) {
-			Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+			Intent intent = new Intent(
+					Intent.ACTION_PICK,
+					android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 			Uri uri = intent.getData();
 
-			String[] proj = { MediaStore.Images.Media.DATA, MediaStore.Images.Media.MIME_TYPE, MediaStore.Images.Media._ID };
-			Cursor cursor = mContext.getContentResolver().query(uri, proj, null, null, null);
+			String[] proj = { MediaStore.Images.Media.DATA,
+					MediaStore.Images.Media.MIME_TYPE,
+					MediaStore.Images.Media._ID };
+			Cursor cursor = mContext.getContentResolver().query(uri, proj,
+					null, null, null);
 			if (cursor == null) {
 				return list;
 			}
@@ -120,7 +126,14 @@ public class Util {
 				fileInfo.size = tmpFile.length();
 				fileInfo.imgId = imgId;
 				fileInfo.time = tmpFile.lastModified();
-
+				if (TextUtils.isEmpty(fileInfo.mimeType)) {
+					if (path.endsWith("jpg")) {
+						fileInfo.mimeType = "image/jpeg";
+					}
+					if (path.endsWith("png")) {
+						fileInfo.mimeType = "image/png";
+					}
+				}
 				list.add(fileInfo);
 			}
 		}
@@ -139,8 +152,10 @@ public class Util {
 
 		HashMap<Integer, ThumbnailInfo> allThumbnailMap = new HashMap<Integer, ThumbnailInfo>();
 
-		String[] projection = { Thumbnails._ID, Thumbnails.IMAGE_ID, Thumbnails.DATA };
-		Cursor cur = mContext.getContentResolver().query(Thumbnails.EXTERNAL_CONTENT_URI, projection, null, null, null);
+		String[] projection = { Thumbnails._ID, Thumbnails.IMAGE_ID,
+				Thumbnails.DATA };
+		Cursor cur = mContext.getContentResolver().query(
+				Thumbnails.EXTERNAL_CONTENT_URI, projection, null, null, null);
 		if (cur == null) {
 			return allThumbnailMap;
 		}
@@ -170,7 +185,8 @@ public class Util {
 
 	}
 
-	public static final String SDCARD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath();
+	public static final String SDCARD_PATH = Environment
+			.getExternalStorageDirectory().getAbsolutePath();
 
 	// public static final String THUMBNAIL_SAVE_PATH =
 	// Environment.getExternalStorageDirectory().getAbsolutePath() +
@@ -186,9 +202,10 @@ public class Util {
 			return null;
 		}
 
-		Bitmap createdBitmap = ThumbnailUtils.extractThumbnail(srcBitmap, 157, 157);
+		Bitmap createdBitmap = ThumbnailUtils.extractThumbnail(srcBitmap, 157,
+				157);
 
-		String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
+		String realPathStr = UIMediaScanner.CACHE_PATH + "/.thumbnails_for_me";
 		File realPath = new File(realPathStr);
 		if (!realPath.exists()) {
 			realPath.mkdirs();
@@ -216,37 +233,48 @@ public class Util {
 
 		if ((filterType | IMAGE_TYPE) == IMAGE_TYPE) {
 			HashMap<Integer, ThumbnailInfo> allThumbnailInfo = listAllThumbnail();
-			Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+			Intent intent = new Intent(
+					Intent.ACTION_PICK,
+					android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 			Uri uri = intent.getData();
 
-			String[] proj = { MediaStore.Images.Media.DATA, MediaStore.Images.Media.MIME_TYPE, MediaStore.Images.Media.SIZE, MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_MODIFIED };
-			Cursor cursor = mContext.getContentResolver().query(uri, proj, null, null, null);
+			String[] proj = { MediaStore.Images.Media.DATA,
+					MediaStore.Images.Media.MIME_TYPE,
+					MediaStore.Images.Media.SIZE, MediaStore.Images.Media._ID,
+					MediaStore.Images.Media.DATE_MODIFIED,
+					MediaStore.Images.Media.BUCKET_DISPLAY_NAME };
+			Cursor cursor = mContext.getContentResolver().query(uri, proj,
+					null, null, null);
 			if (cursor == null) {
 				return list;
 			}
-
+			List<String> groups = new ArrayList<String>();
 			while (cursor.moveToNext()) {
-
 				String path = cursor.getString(0);
 				String mimeType = cursor.getString(1);
 				int size = cursor.getInt(2);
 				int imgId = cursor.getInt(3);
-
+				String groupName = cursor.getString(5);
+				if(!groups.contains(groupName)){
+					System.out.println(groupName);
+					groups.add(groupName);
+				}
+				if(groupName.equals("find")||groupName.equals("0")){
+					System.out.println(path);
+				}
 				FileInfo info = new FileInfo();
 				info.path = new File(path).getAbsolutePath();
 				info.mimeType = mimeType;
 				info.size = size;
 				info.imgId = imgId;
 				info.time = new File(path).lastModified();
-
+				info.groupName = groupName;
 				ThumbnailInfo tmpInfo = allThumbnailInfo.get(imgId);
 				if (tmpInfo != null && !TextUtils.isEmpty(tmpInfo.imagePath)) {
 					info.thumbImgPath = tmpInfo.imagePath;
 				}
-
 				list.add(info);
 			}
-
 		}
 
 		/* scan the video file */
@@ -262,11 +290,18 @@ public class Util {
 
 		ArrayList<FileInfo> list = new ArrayList<FileInfo>();
 
-		String[] thumbColumns = new String[] { MediaStore.Video.Thumbnails.DATA, MediaStore.Video.Thumbnails.VIDEO_ID };
+		String[] thumbColumns = new String[] {
+				MediaStore.Video.Thumbnails.DATA,
+				MediaStore.Video.Thumbnails.VIDEO_ID };
 
 		ContentResolver testcr = mContext.getContentResolver();
-		String[] projection = { MediaStore.Video.Media.DATA, MediaStore.Video.Media.MIME_TYPE, MediaStore.Video.Media.SIZE, MediaStore.Video.Media._ID };
-		Cursor videoCur = testcr.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, projection, null, null, null);
+
+		String[] projection = { MediaStore.Video.Media.DATA,
+				MediaStore.Video.Media.MIME_TYPE, MediaStore.Video.Media.SIZE,
+				MediaStore.Video.Media._ID };
+		Cursor videoCur = testcr.query(
+				MediaStore.Video.Media.EXTERNAL_CONTENT_URI, projection, null,
+				null, null);
 		if (videoCur == null) {
 			return list;
 		}
@@ -284,13 +319,18 @@ public class Util {
 			info.imgId = imgId;
 			info.time = new File(path).lastModified();
 
-			int id = videoCur.getInt(videoCur.getColumnIndexOrThrow(MediaStore.Video.Media._ID));
+			int id = videoCur.getInt(videoCur
+					.getColumnIndexOrThrow(MediaStore.Video.Media._ID));
 			String selection = MediaStore.Video.Thumbnails.VIDEO_ID + "=?";
 			String[] selectionArgs = new String[] { id + "" };
 
-			Cursor thumbCursor = mContext.getContentResolver().query(MediaStore.Video.Thumbnails.EXTERNAL_CONTENT_URI, thumbColumns, selection, selectionArgs, null);
+			Cursor thumbCursor = mContext.getContentResolver().query(
+					MediaStore.Video.Thumbnails.EXTERNAL_CONTENT_URI,
+					thumbColumns, selection, selectionArgs, null);
 			if (thumbCursor != null && thumbCursor.moveToFirst()) {
-				info.thumbImgPath = thumbCursor.getString(videoCur.getColumnIndexOrThrow(MediaStore.Video.Thumbnails.DATA));
+				info.thumbImgPath = thumbCursor
+						.getString(videoCur
+								.getColumnIndexOrThrow(MediaStore.Video.Thumbnails.DATA));
 			}
 
 			list.add(info);
@@ -305,11 +345,13 @@ public class Util {
 		return BitmapFactory.decodeFile(imagePath.getAbsolutePath());
 	}
 
-	public Bitmap getPathBitmap(Uri imageFilePath, int dw, int dh) throws FileNotFoundException {
+	public Bitmap getPathBitmap(Uri imageFilePath, int dw, int dh)
+			throws FileNotFoundException {
 
 		BitmapFactory.Options op = new BitmapFactory.Options();
 		op.inJustDecodeBounds = true;
-		Bitmap pic = BitmapFactory.decodeStream(mContext.getContentResolver().openInputStream(imageFilePath), null, op);
+		Bitmap pic = BitmapFactory.decodeStream(mContext.getContentResolver()
+				.openInputStream(imageFilePath), null, op);
 
 		int wRatio = (int) Math.ceil(op.outWidth / (float) dw);
 		int hRatio = (int) Math.ceil(op.outHeight / (float) dh);
@@ -322,7 +364,8 @@ public class Util {
 			}
 		}
 		op.inJustDecodeBounds = false;
-		pic = BitmapFactory.decodeStream(mContext.getContentResolver().openInputStream(imageFilePath), null, op);
+		pic = BitmapFactory.decodeStream(mContext.getContentResolver()
+				.openInputStream(imageFilePath), null, op);
 		return pic;
 	}
 
@@ -334,7 +377,8 @@ public class Util {
 		return null;
 	}
 
-	public void imgExcute(ImageView imageView, UzImgCallBack icb, FileInfo... params) {
+	public void imgExcute(ImageView imageView, UzImgCallBack icb,
+			FileInfo... params) {
 		LoadBitmapAsync loadBitAsynk = new LoadBitmapAsync(imageView, icb);
 		loadBitAsynk.execute(params);
 	}
@@ -356,36 +400,52 @@ public class Util {
 				if (params != null) {
 					for (int i = 0; i < params.length; i++) {
 
-						if (!TextUtils.isEmpty(params[i].mimeType) && params[i].mimeType.startsWith("image")) {
+						if (!TextUtils.isEmpty(params[i].mimeType)
+								&& params[i].mimeType.startsWith("image")) {
 
 							if (!TextUtils.isEmpty(params[i].path)) {
 
-								String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
+								String realPathStr = UIMediaScanner.CACHE_PATH
+										+ "/.thumbnails_for_me";
 								File realPath = new File(realPathStr);
-								File imagePath = new File(realPath, Util.stringToMD5(params[i].path) + ".jpg");
+								File imagePath = new File(realPath,
+										Util.stringToMD5(params[i].path)
+												+ ".jpg");
 
-								int degree = BitmapToolkit.readPictureDegree(params[i].path);
+								int degree = BitmapToolkit
+										.readPictureDegree(params[i].path);
 
 								if (imagePath.exists()) {
 									bitmap = getThumbnailBitmap(imagePath);
 								} else {
-									bitmap = getPathBitmap(Uri.fromFile(new File(params[i].path)), 200, 200);
-									bitmap = BitmapToolkit.rotaingImageView(degree, bitmap);
+									bitmap = getPathBitmap(
+											Uri.fromFile(new File(
+													params[i].path)), 200, 200);
+									bitmap = BitmapToolkit.rotaingImageView(
+											degree, bitmap);
 									saveBitmap(params[i].path, bitmap);
 								}
 							}
 
 						}
-						if (!TextUtils.isEmpty(params[i].mimeType) && params[i].mimeType.startsWith("video")) {
-							if (!TextUtils.isEmpty(params[i].thumbImgPath) && new File(params[i].thumbImgPath).exists()) {
-								bitmap = getPathBitmap(Uri.fromFile(new File(params[i].thumbImgPath)), 200, 200);
+						if (!TextUtils.isEmpty(params[i].mimeType)
+								&& params[i].mimeType.startsWith("video")) {
+							if (!TextUtils.isEmpty(params[i].thumbImgPath)
+									&& new File(params[i].thumbImgPath)
+											.exists()) {
+								bitmap = getPathBitmap(Uri.fromFile(new File(
+										params[i].thumbImgPath)), 200, 200);
 							} else {
-								String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
+								String realPathStr = UIMediaScanner.CACHE_PATH
+										+ "/.thumbnails_for_me";
 								File realPath = new File(realPathStr);
-								File imagePath = new File(realPath, Util.stringToMD5(params[i].path) + ".jpg");
+								File imagePath = new File(realPath,
+										Util.stringToMD5(params[i].path)
+												+ ".jpg");
 
 								if (imagePath.exists()) {
-									bitmap = getPathBitmap(Uri.fromFile(imagePath), 200, 200);
+									bitmap = getPathBitmap(
+											Uri.fromFile(imagePath), 200, 200);
 								} else {
 									bitmap = createVideoThumbnail(params[i].path);
 									saveBitmap(params[i].path, bitmap);
@@ -411,13 +471,15 @@ public class Util {
 
 	public static Bitmap createVideoThumbnail(String videoPath) {
 
-		Bitmap srcBitmap = ThumbnailUtils.createVideoThumbnail(videoPath, MediaStore.Images.Thumbnails.MICRO_KIND);
+		Bitmap srcBitmap = ThumbnailUtils.createVideoThumbnail(videoPath,
+				MediaStore.Images.Thumbnails.MICRO_KIND);
 
 		if (srcBitmap == null) {
 			return null;
 		}
 
-		srcBitmap = ThumbnailUtils.extractThumbnail(srcBitmap, 200, 200, ThumbnailUtils.OPTIONS_RECYCLE_INPUT);
+		srcBitmap = ThumbnailUtils.extractThumbnail(srcBitmap, 200, 200,
+				ThumbnailUtils.OPTIONS_RECYCLE_INPUT);
 		return srcBitmap;
 	}
 
@@ -427,7 +489,7 @@ public class Util {
 			return;
 		}
 
-		String realPathStr = UIMediaScanner.CACHE_PATH + "/thumbnails_for_me";
+		String realPathStr = UIMediaScanner.CACHE_PATH + "/.thumbnails_for_me";
 		File realPath = new File(realPathStr);
 		if (!realPath.exists()) {
 			realPath.mkdirs();
@@ -450,7 +512,8 @@ public class Util {
 		}
 	}
 
-	public static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+	public static int calculateInSampleSize(BitmapFactory.Options options,
+			int reqWidth, int reqHeight) {
 		// Raw height and width of image
 		final int height = options.outHeight;
 		final int width = options.outWidth;
@@ -465,26 +528,26 @@ public class Util {
 		}
 		return inSampleSize;
 	}
-	
-	
-	public static Bitmap decodeSampledBitmapFromFile(String fileName,  
-            int reqWidth, int reqHeight) {  
-  
-        // First decode with inJustDecodeBounds=true to check dimensions  
-        final BitmapFactory.Options options = new BitmapFactory.Options();  
-        options.inJustDecodeBounds = true;  
-        BitmapFactory.decodeFile(fileName ,options);  
-  
-        // Calculate inSampleSize  
-        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);  
-  
-        // Decode bitmap with inSampleSize set  
-        options.inJustDecodeBounds = false;  
-        return BitmapFactory.decodeFile(fileName, options);
-    } 
+
+	public static Bitmap decodeSampledBitmapFromFile(String fileName,
+			int reqWidth, int reqHeight) {
+
+		// First decode with inJustDecodeBounds=true to check dimensions
+		final BitmapFactory.Options options = new BitmapFactory.Options();
+		options.inJustDecodeBounds = true;
+		BitmapFactory.decodeFile(fileName, options);
+
+		// Calculate inSampleSize
+		options.inSampleSize = calculateInSampleSize(options, reqWidth,
+				reqHeight);
+
+		// Decode bitmap with inSampleSize set
+		options.inJustDecodeBounds = false;
+		return BitmapFactory.decodeFile(fileName, options);
+	}
 
 	/**
-	 * 将字符串转成MD5值
+	 * 将字符串转成MD5�?
 	 * 
 	 * @param string
 	 * @return
@@ -498,7 +561,8 @@ public class Util {
 		byte[] hash;
 
 		try {
-			hash = MessageDigest.getInstance("MD5").digest(string.getBytes("UTF-8"));
+			hash = MessageDigest.getInstance("MD5").digest(
+					string.getBytes("UTF-8"));
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 			return null;

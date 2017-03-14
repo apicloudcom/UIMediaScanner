@@ -90,6 +90,8 @@ public class UzImgFileListActivity extends BaseActivity implements OnItemClickLi
 	}
 
 	public void tobreak(View view) {
+		Intent intent = new Intent();
+		setResult(0, intent);
 		finish();
 	}
 
@@ -122,7 +124,7 @@ public class UzImgFileListActivity extends BaseActivity implements OnItemClickLi
 		intent.putExtras(bundle);
 		intent.putExtra(UIMediaScanner.CONFIG_TAG, mConfig);
 		startActivityForResult(intent, REQUEST_CODE);
-
+		
 	}
 
 	@Override

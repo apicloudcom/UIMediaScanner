@@ -29,6 +29,8 @@ public class FileInfo implements Serializable {
 	public int imgId;
 	public long time;
 	
+	public String groupName;
+	
 	public boolean isChecked;
 
 }
