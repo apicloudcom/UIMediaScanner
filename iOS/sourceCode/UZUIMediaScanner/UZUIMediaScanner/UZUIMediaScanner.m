@@ -26,6 +26,7 @@
     NSInteger capicity;          //每页数据容量
     BOOL preparedData;           //所需数据是否准备完
     CGSize thumbSize;            //缩略图大小
+    BOOL ignoreThumbSize;
 }
 
 @property (nonatomic, strong) NSMutableArray *assets;
@@ -72,19 +73,55 @@ static char extendKey;
 #pragma mark -
 #pragma mark  interface
 #pragma mark -
-
+- (BOOL)canUseAlbum {
+    ALAuthorizationStatus photoStatus = [ALAssetsLibrary authorizationStatus];
+    BOOL status = NO;
+    NSString *details = nil;
+    switch (photoStatus) {
+        case ALAuthorizationStatusNotDetermined:
+            details = @"notDetermined";
+            status = YES;
+            break;
+        case ALAuthorizationStatusRestricted:
+            details = @"restricted";
+            break;
+        case ALAuthorizationStatusDenied:
+            details = @"denied";
+            break;
+        case ALAuthorizationStatusAuthorized:
+            details = @"authorized";
+            status = YES;
+            break;
+            
+        default:
+            details = @"denied";
+            break;
+    }
+    return status;
+}
 - (void)open:(NSDictionary *)paramsDict_ {
     cbOpenId = [paramsDict_ integerValueForKey:@"cbId" defaultValue:-1];
+    if (![self canUseAlbum]) {
+        [self sendResultEventWithCallbackId:cbOpenId dataDict:@{@"eventType":@"albumError"} errDict:nil doDelete:NO];
+        return;
+    }
     [self classify:paramsDict_];
 }
 
 - (void)scan:(NSDictionary *)paramsDict_ {
+    cbScannerId = [paramsDict_ integerValueForKey:@"cbId" defaultValue:-1];
+    if (![self canUseAlbum]) {
+        [self sendResultEventWithCallbackId:cbScannerId dataDict:@{@"eventType":@"albumError"} errDict:nil doDelete:NO];
+        return;
+    }
+    
     preparedData = NO;
     fecthCbId = -1;
     fetchPosition = 0;
+    ignoreThumbSize = [paramsDict_ boolValueForKey:@"ignore" defaultValue:NO];
     self.assets = [NSMutableArray arrayWithCapacity:1];
     _scanDict = [NSMutableDictionary dictionaryWithDictionary:paramsDict_];
-    cbScannerId = [paramsDict_ integerValueForKey:@"cbId" defaultValue:-1];
+    
     NSDictionary *thumbSizeInfo = [paramsDict_ dictValueForKey:@"thumbnail" defaultValue:@{}];
     CGFloat thumbW = [thumbSizeInfo floatValueForKey:@"w" defaultValue:100.0];
     CGFloat thumbH = [thumbSizeInfo floatValueForKey:@"h" defaultValue:100.0];
@@ -115,16 +152,29 @@ static char extendKey;
     if (path.length == 0) {
         return;
     }
+    //NSString *destinationType = [paramsDict_ stringValueForKey:@"destinationType" defaultValue:@"url"];
+    NSDictionary *scaleDict = [paramsDict_ dictValueForKey:@"scale" defaultValue:@{}];
+    /*
+     * 将相册内的原图拷贝到缓存目录下，这样做会有图片旋转的问题
+     * 先创建个队列，然后把线程交给队列，异步拷贝图片
+     */
     //创建NSBlockOperation 来执行每一次转换，图片复制等耗时操作
+    __weak typeof (self) weakSelf = self;
     NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
-        NSString *locStr = [self localPathForAssetLibraryPath:path];
+        NSString *locStr = [weakSelf localPathForAssetLibraryPath:path withScaleInfo:scaleDict];
         //回到主线程
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self sendResultEventWithCallbackId:transCbId dataDict:[NSDictionary dictionaryWithObjectsAndKeys:locStr,@"path", nil] errDict:nil doDelete:YES];
+            if ([locStr isKindOfClass:[NSString class]] && locStr.length>0) {
+                [weakSelf sendResultEventWithCallbackId:transCbId dataDict:@{@"status":@(YES),@"path":locStr} errDict:nil doDelete:YES];
+            } else {
+                [weakSelf sendResultEventWithCallbackId:transCbId dataDict:@{@"status":@(NO)} errDict:nil doDelete:YES];            }
         });
     }];
     [self.transPathQueue addOperation:operation];
-    /*
+    /*    
+     * 将相册内的原图处理后拷贝到缓存目录下，这样不会有旋转的问题，但是获取不到原图
+     * 先创建个队列，然后把线程交给队列，异步拷贝图片
+
     NSURL *url = [[NSURL alloc] initWithString:path];
     //__block UIImage *imageAss = nil;
     __weak UZUIMediaScanner *wealSelf = self;
@@ -142,9 +192,8 @@ static char extendKey;
     ALAssetsLibraryAccessFailureBlock failureblock  = ^(NSError *myerror) {
         NSLog(@"Turbo_UIMediascanner_cant get image - %@",[myerror localizedDescription]);
     };
-    ALAssetsLibrary *assetsLibrary;
-    assetsLibrary = [self.class defaultAssetsLibrary];
-    [assetsLibrary assetForURL:url resultBlock:resultblock failureBlock:failureblock];
+    ALAssetsLibrary *assetsLibrary = [self.class defaultAssetsLibrary];
+     [assetsLibrary assetForURL:url resultBlock:resultblock failureBlock:failureblock];
      */
 }
 
@@ -162,7 +211,8 @@ static char extendKey;
             [self sendResultEventWithCallbackId:duratinCbId dataDict:@{@"duration" : @(duration)} errDict:nil doDelete:YES];
         }
     }else {
-        ALAssetsLibrary *assetsLibrary = [UZUIAssetsGroupViewController defaultAssetsLibrary];
+        //ALAssetsLibrary *assetsLibrary = [UZUIAssetsGroupViewController defaultAssetsLibrary];
+        ALAssetsLibrary *assetsLibrary = [self.class defaultAssetsLibrary];
         __weak typeof(self) weakSelf = self;
         ALAssetsLibraryGroupsEnumerationResultsBlock resultsBlock = ^(ALAssetsGroup *group, BOOL *stop) {
             if (group) {
@@ -277,7 +327,9 @@ static char extendKey;
                     arr = _vidAry;
                 }
                 for (ALAsset *asset in arr) {
-                    [self.assets addObject:asset];
+                    if (![self.assets containsObject:asset]) {
+                        [self.assets addObject:asset];
+                    }
                 }
                 [self sortDataSource:nil];
             }
@@ -287,12 +339,18 @@ static char extendKey;
                 if (result) {
                     //扩展属性
                     objc_setAssociatedObject(result, &extendKey, groupname, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-                    [_allAry addObject:result];
+                    if (![_allAry containsObject:result]) {
+                        [_allAry addObject:result];
+                    }
                     if ([type isEqual:ALAssetTypePhoto]) {
-                        [_picAry addObject:result];
+                        if (![_picAry containsObject:result]) {
+                            [_picAry addObject:result];
+                        }
                     }
                     if ([type isEqual:ALAssetTypeVideo]) {
-                        [_vidAry addObject:result];
+                        if (![_vidAry containsObject:result]) {
+                            [_vidAry addObject:result];
+                        }
                     }
                 }
             }];
@@ -449,6 +507,7 @@ static char extendKey;
         [self sendResultEventWithCallbackId:fecthCbId dataDict:sendDict errDict:nil doDelete:NO];
     } else {
         [sendDict setObject:[NSNumber numberWithInteger:_assets.count] forKey:@"total"];
+        [sendDict setObject:@"success" forKey:@"eventType"];
         [self sendResultEventWithCallbackId:cbScannerId dataDict:sendDict errDict:nil doDelete:NO];
     }
     //获得该方法所在的线程
@@ -481,7 +540,9 @@ static char extendKey;
         NSURL *assetUrls = result.defaultRepresentation.url;
         //资源缩略图URL
         UIImage *image = [UIImage imageWithCGImage:result.thumbnail];
-        image = [self setNewSizeWithOriginImage:image toSize:thumbSize];
+        if (!ignoreThumbSize) {
+            image = [self setNewSizeWithOriginImage:image toSize:thumbSize];
+        }
         NSString *imagePath = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject;
         //创建存放缩略图的文件
         NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -667,8 +728,13 @@ static char extendKey;
     BOOL showPreview = [paramsDict_ boolValueForKey:@"showPreview" defaultValue:NO];
     BOOL showBrowser = [paramsDict_ boolValueForKey:@"showBrowser" defaultValue:NO];
     if (classifyId) {
+        NSDictionary *texts = [paramsDict_ dictValueForKey:@"texts" defaultValue:@{}];
+        NSString *cancelBtnTittle = [texts stringValueForKey:@"cancelText" defaultValue:@"取消"];
+        NSString *classifyTitle = [texts stringValueForKey:@"classifyTitle" defaultValue:@"相簿"];
         UZUIAssetsGroupViewController *assetGroupVc = [[UZUIAssetsGroupViewController alloc]init];
         assetGroupVc.showBrowser = showBrowser;
+        assetGroupVc.titleStr = classifyTitle;
+        assetGroupVc.cancelBtnTitle = cancelBtnTittle;
         assetGroupVc.showPreview = showPreview;
         assetGroupVc.paramsDict = paramsDict_;
         assetGroupVc.delegate = self; 
@@ -727,9 +793,16 @@ static char extendKey;
     });
 }
 
-- (NSString *)localPathForAssetLibraryPath:(NSString *)assetsLibraryPath {
+- (NSString *)localPathForAssetLibraryPath:(NSString *)assetsLibraryPath  withScaleInfo:(NSDictionary *)scaleInfo {
+    BOOL untreated = [scaleInfo boolValueForKey:@"untreated" defaultValue:NO];
     NSString *localPath = nil;
-    ALAssetRepresentation *assetRepresentation = [self assetRepresentationForPath:assetsLibraryPath];
+    NSArray *mediaInfo = [self assetRepresentationForPath:assetsLibraryPath];
+    if (!mediaInfo) {
+        return nil;
+    }
+    ALAssetRepresentation *assetRepresentation = [mediaInfo firstObject];
+    BOOL isPhoto = [[mediaInfo lastObject] boolValue];
+    
     long long size = [assetRepresentation size];
     if (size > 0) {
         NSString *fileName = [assetRepresentation filename];
@@ -740,39 +813,152 @@ static char extendKey;
             [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:nil];
         }
         NSString *name = [self md5:assetsLibraryPath];
-        NSString *mimeType = [[[fileName componentsSeparatedByString:@"."] lastObject] lowercaseString];
+        NSString *mimeType = [[fileName pathExtension] lowercaseString];//[[[fileName componentsSeparatedByString:@"."] lastObject] lowercaseString];
         localPath = [NSString stringWithFormat:@"%@/%@.%@",filePath,name,mimeType];
         
-        //localPath = [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
-        NSOutputStream *outPutStream = [[NSOutputStream alloc] initToFileAtPath:localPath append:NO];
-        [outPutStream open];
-        
-        NSUInteger partitionSize = 1024*256;
-        NSUInteger mod = size%partitionSize;
-        long long count = size/partitionSize+(mod==0?0:1);
-        for (int i=0; i<count; i++) {
-            Byte buffer[1024*256];
-            NSUInteger length = i==count-1?(mod==0?partitionSize:mod):partitionSize;
-            NSUInteger bufferSize = [assetRepresentation getBytes:buffer fromOffset:i*partitionSize length:length error:nil];
+        if ([fileManager fileExistsAtPath:localPath]) {        //创建路径
+            [fileManager removeItemAtPath:localPath error:nil];
+        }
+        // 若不是照片（视频）或者是git图片，则返回原文件
+        if (untreated || !isPhoto || [mimeType isEqualToString:@"gif"]) {
+            NSOutputStream *outPutStream = [[NSOutputStream alloc] initToFileAtPath:localPath append:NO];
+            [outPutStream open];
             
-            if (bufferSize > 0) {
-                [outPutStream write:buffer maxLength:bufferSize];
+            NSUInteger partitionSize = 1024*256;
+            NSUInteger mod = size%partitionSize;
+            long long count = size/partitionSize+(mod==0?0:1);
+            for (int i=0; i<count; i++) {
+                Byte buffer[1024*256];
+                NSUInteger length = i==count-1?(mod==0?partitionSize:mod):partitionSize;
+                NSUInteger bufferSize = [assetRepresentation getBytes:buffer fromOffset:i*partitionSize length:length error:nil];
+                
+                if (bufferSize > 0) {
+                    [outPutStream write:buffer maxLength:bufferSize];
+                }
+            }
+            [outPutStream close];
+            return localPath;
+        }
+        //__block BOOL isHEIF = NO;
+        //if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 9.0) {
+        //    NSArray *resourceList = [PHAssetResource assetResourcesForAsset:phAsset];
+        //    [resourceList enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        //        PHAssetResource *resource = obj;
+        //        NSString *UTI = resource.uniformTypeIdentifier;
+        //        if ([UTI isEqualToString:@"public.heif"] || [UTI isEqualToString:@"public.heic"]) {
+        //            isHEIF = YES;
+        //            *stop = YES;
+        //        }
+        //    }];
+        //} else {
+        //    NSString *UTI = [phAsset valueForKey:@"uniformTypeIdentifier"];
+        //    isHEIF = [UTI isEqualToString:@"public.heif"] || [UTI isEqualToString:@"public.heic"];
+        //}
+//        BOOL isHEIF = NO;
+//        if ([mimeType isEqualToString:@"heif"] || [mimeType isEqualToString:@"heic"]) {
+//            isHEIF = YES;
+//        }
+//        if (isHEIF && [[[UIDevice currentDevice] systemVersion] floatValue]>=8.0) {
+//            CIImage *ciImage = [CIImage imageWithContentsOfURL:assetsLibraryPath];
+//            UIImage *image = [UIImage imageWithCIImage:ciImage];
+//
+//            /* 从资源id --> 本地资源的转换 */
+//            PHFetchResult<PHAsset *> * fetchResult = [PHAsset fetchAssetsWithLocalIdentifiers:@[assetsLibraryPath] options:nil];
+//            if (0 == fetchResult.count) {
+//                return nil;
+//            }
+//            PHAsset *phAsset = fetchResult.firstObject;
+//            __block NSString *objectID = [NSString stringWithFormat:@"%@%@.jpg",filePath,name];
+//            dispatch_semaphore_t signal = dispatch_semaphore_create(1);
+//            [[PHImageManager defaultManager] requestImageDataForAsset:phAsset options:nil resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info) {
+//                CIImage *ciImage = [CIImage imageWithData:imageData];
+//                CIContext *context = [CIContext context];
+//                NSData *jpgData = [context JPEGRepresentationOfImage:ciImage colorSpace:ciImage.colorSpace options:@{}];
+//                NSError *err = nil;
+//                if (jpgData && [jpgData writeToFile:objectID options:NSAtomicWrite error:&err]) {
+//                    //return localPath;
+//                }
+//                dispatch_semaphore_signal(signal);
+//            }];
+//            dispatch_semaphore_wait(signal, DISPATCH_TIME_FOREVER);
+//            return objectID;
+//        }
+        
+        //
+        UIImage *targetImg = nil;
+        
+//        BOOL isHEIF = NO;
+//        if ([mimeType isEqualToString:@"heif"] || [mimeType isEqualToString:@"heic"]) {
+//            isHEIF = YES;
+//        }
+//        if (isHEIF && [[[UIDevice currentDevice] systemVersion] floatValue]>=8.0) {
+//            NSURL *url = [NSURL fileURLWithPath:assetsLibraryPath];
+//            CIImage *ciImage = [CIImage imageWithContentsOfURL:url];
+//            targetImg = [UIImage imageWithCIImage:ciImage];
+//        } else {
+//            targetImg = [UIImage imageWithCGImage:assetRepresentation.fullScreenImage];
+//        }
+        targetImg = [UIImage imageWithCGImage:assetRepresentation.fullScreenImage];
+        if (targetImg && targetImg.imageOrientation!=UIImageOrientationUp) {
+            targetImg = [self imageCorrectedOrientation:targetImg];
+        }
+        UIImage *scaledImage = nil;
+        float sizeWidth = [scaleInfo floatValueForKey:@"width" defaultValue:0];
+        float sizeHeight = [scaleInfo floatValueForKey:@"height" defaultValue:0];
+        float quality = [scaleInfo floatValueForKey:@"quality" defaultValue:50];
+        CGSize targetSize = CGSizeMake(sizeWidth, sizeHeight);
+        if (targetSize.width>0 || targetSize.height>0) {
+            scaledImage = [self scalingImageBySize:targetImg toSize:targetSize];
+        }
+        
+        NSData *imgData = UIImageJPEGRepresentation(scaledImage == nil ? targetImg : scaledImage, quality/100.0f);
+        if (!imgData) {
+            imgData = UIImagePNGRepresentation(scaledImage == nil ? targetImg : scaledImage);
+        }
+        if (!imgData)  {
+            return nil;
+        }
+        NSError *err = nil;
+        if (![imgData writeToFile:localPath options:NSAtomicWrite error:&err]) {
+            return nil;
+        }
+        if ([mimeType isEqualToString:@"heif"] || [mimeType isEqualToString:@"heic"]) {
+            NSURL *url = [NSURL fileURLWithPath:localPath];
+            CIImage *ciImage = [CIImage imageWithContentsOfURL:url];
+            CIContext *context = [CIContext context];
+            NSData *imgDataheic = [context JPEGRepresentationOfImage:ciImage colorSpace:ciImage.colorSpace options:@{}];
+           if (!imgDataheic)  {
+                return nil;
+            }
+            NSError *err = nil;
+            NSString *newPath = [NSString stringWithFormat:@"%@/%@.jpg",filePath,name];
+            if ([imgDataheic writeToFile:newPath options:NSAtomicWrite error:&err]) {
+                if ([fileManager fileExistsAtPath:localPath]) {        //创建路径
+                    [fileManager removeItemAtPath:localPath error:nil];
+                }
+                return newPath;
             }
         }
-        [outPutStream close];
     }
     return localPath;
 }
 
-- (ALAssetRepresentation *)assetRepresentationForPath:(NSString *)assetsLibraryPath {
-    __block ALAssetRepresentation *assetRepresentation = nil;
+- (NSArray *)assetRepresentationForPath:(NSString *)assetsLibraryPath {
+    //__block ALAssetRepresentation *assetRepresentation = nil;
+    __block NSArray *assetInfo = nil;
     if ([assetsLibraryPath hasPrefix:@"assets-library://"]) {
         __block BOOL finished = NO;
         
         dispatch_async(dispatch_get_global_queue(0, 0), ^{
             ALAssetsLibraryAssetForURLResultBlock resultBlock = ^(ALAsset *asset) {
                 if (asset) {
-                    assetRepresentation = [asset defaultRepresentation];
+                    ALAssetRepresentation *assetRepresentation = [asset defaultRepresentation];
+                    NSString *mediaType = [asset valueForProperty:ALAssetPropertyType];
+                    BOOL isPhoto = YES;
+                    if (![mediaType isEqualToString:@"ALAssetTypePhoto"]) {
+                        isPhoto = NO;
+                    }
+                    assetInfo = @[assetRepresentation,@(isPhoto)];
                 }
                 finished = YES;
             };
@@ -781,7 +967,7 @@ static char extendKey;
                 finished = YES;
             };
             
-            ALAssetsLibrary *assetsLibrary = [self defaultAssetsLibrary];
+            ALAssetsLibrary *assetsLibrary = [self.class defaultAssetsLibrary];
             [assetsLibrary assetForURL:[NSURL URLWithString:assetsLibraryPath] resultBlock:resultBlock failureBlock:failureBlock];
         });
         
@@ -789,15 +975,101 @@ static char extendKey;
             [[NSRunLoop currentRunLoop] runMode:NSRunLoopCommonModes beforeDate:[NSDate distantFuture]];
         }
     }
-    return assetRepresentation;
+    //return assetRepresentation;
+    return assetInfo;
 }
 
-- (ALAssetsLibrary *)defaultAssetsLibrary {
-    static dispatch_once_t pred = 0;
-    static ALAssetsLibrary *library = nil;
-    dispatch_once(&pred, ^{
-        library = [[ALAssetsLibrary alloc] init];
-    });
-    return library;
+
+- (UIImage *)scalingImageBySize:(UIImage *)anImage toSize:(CGSize)frameSize {
+    UIImage *sourceImage = anImage;
+    UIImage *newImage = nil;
+    CGSize imageSize = sourceImage.size;
+    CGFloat width = imageSize.width;
+    CGFloat height = imageSize.height;
+    CGFloat targetWidth = frameSize.width;
+    CGFloat targetHeight = frameSize.height;
+    if (targetWidth>0 && targetHeight==0) {
+        targetHeight = targetWidth/width*height;
+    }
+    if (targetHeight>0 && targetWidth==0) {
+        targetWidth = targetHeight/height*width;
+    }
+    CGFloat scaleFactor = 0.0;
+    CGSize scaledSize = frameSize;
+    
+    if (!CGSizeEqualToSize(imageSize, frameSize)) {
+        CGFloat widthFactor = targetWidth / width;
+        CGFloat heightFactor = targetHeight / height;
+        
+        // opposite comparison to imageByScalingAndCroppingForSize in order to contain the image within the given bounds
+        if (widthFactor > heightFactor) {
+            scaleFactor = heightFactor; // scale to fit height
+        } else {
+            scaleFactor = widthFactor; // scale to fit width
+        }
+        scaledSize = CGSizeMake(MIN(width * scaleFactor, targetWidth), MIN(height * scaleFactor, targetHeight));
+    }
+    
+    UIGraphicsBeginImageContext(scaledSize); // this will resize
+    
+    [sourceImage drawInRect:CGRectMake(0, 0, scaledSize.width, scaledSize.height)];
+    
+    newImage = UIGraphicsGetImageFromCurrentImageContext();
+    if (newImage == nil) {
+        NSLog(@"could not scale image");
+    }
+    
+    // pop the context to get back to the default
+    UIGraphicsEndImageContext();
+    return newImage;
+}
+
+- (UIImage *)imageCorrectedOrientation:(UIImage *)anImage {
+    float rotation_radians = 0;
+    bool perpendicular = false;
+    
+    switch ([anImage imageOrientation]) {
+        case UIImageOrientationUp :
+            rotation_radians = 0.0;
+            break;
+            
+        case UIImageOrientationDown :
+            rotation_radians = M_PI; // don't be scared of radians, if you're reading this, you're good at math
+            break;
+            
+        case UIImageOrientationRight:
+            rotation_radians = M_PI_2;
+            perpendicular = true;
+            break;
+            
+        case UIImageOrientationLeft:
+            rotation_radians = -M_PI_2;
+            perpendicular = true;
+            break;
+            
+        default:
+            break;
+    }
+    
+    UIGraphicsBeginImageContext(CGSizeMake(anImage.size.width, anImage.size.height));
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    // Rotate around the center point
+    CGContextTranslateCTM(context, anImage.size.width / 2, anImage.size.height / 2);
+    CGContextRotateCTM(context, rotation_radians);
+    
+    CGContextScaleCTM(context, 1.0, -1.0);
+    float width = perpendicular ? anImage.size.height : anImage.size.width;
+    float height = perpendicular ? anImage.size.width : anImage.size.height;
+    CGContextDrawImage(context, CGRectMake(-width / 2, -height / 2, width, height), [anImage CGImage]);
+    
+    // Move the origin back since the rotation might've change it (if its 90 degrees)
+    if (perpendicular) {
+        CGContextTranslateCTM(context, -anImage.size.height / 2, -anImage.size.width / 2);
+    }
+    
+    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return newImage;
 }
 @end

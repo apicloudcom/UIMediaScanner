@@ -17,6 +17,7 @@
 @property (nonatomic, strong) NSDictionary *paramsDict;
 @property (nonatomic, weak) id<AssetsViewCallBack> delegate;
 @property (nonatomic, assign) BOOL showPreview, showBrowser;
+@property (nonatomic, strong) NSString *titleStr, *cancelBtnTitle;
 
 + (ALAssetsLibrary *)defaultAssetsLibrary;
 

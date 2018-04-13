@@ -8,6 +8,8 @@ package com.uzmap.pkg.uzmodules.UIMediaScanner;
 
 import java.io.Serializable;
 
+import android.text.TextUtils;
+
 public class FileInfo implements Serializable {
 
 	public static int SORT_BY_TIME = 0x0000;
@@ -32,5 +34,16 @@ public class FileInfo implements Serializable {
 	public String groupName;
 	
 	public boolean isChecked;
+
+	@Override
+	public boolean equals(Object o) {
+		if(TextUtils.isEmpty(path) || o == null){
+			return false;
+		}
+		return path.equals(((FileInfo)o).path);
+	}
+	
+	
+	
 
 }

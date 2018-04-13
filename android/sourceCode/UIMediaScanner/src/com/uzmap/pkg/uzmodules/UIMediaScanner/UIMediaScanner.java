@@ -27,11 +27,10 @@ import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
+import android.media.ThumbnailUtils;
 import android.text.TextUtils;
 import android.util.Log;
-
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import com.uzmap.pkg.uzcore.UZCoreUtil;
 import com.uzmap.pkg.uzcore.UZWebView;
@@ -141,6 +140,13 @@ public class UIMediaScanner extends UZModule {
 			}
 			if (!dataObj.isNull("finishText")) {
 				config.finish_title = dataObj.optString("finishText");
+			}
+			if(!dataObj.isNull("selectedMaxText")){
+				config.selectedMaxText = dataObj.optString("selectedMaxText");
+			}
+			
+			if(!dataObj.isNull("classifyTitle")){
+				config.clasifyTitle = dataObj.optString("classifyTitle");
 			}
 		}
 
@@ -257,12 +263,8 @@ public class UIMediaScanner extends UZModule {
 
 		JSONObject thumbnailObj = moduleConztext.optJSONObject("thumbnail");
 		if (thumbnailObj != null) {
-			if (!thumbnailObj.isNull("w")) {
-				thumbWidth = thumbnailObj.optInt("w");
-			}
-			if (!thumbnailObj.isNull("h")) {
-				thumbHeight = thumbnailObj.optInt("h");
-			}
+			thumbWidth = thumbnailObj.optInt("w", 100);
+			thumbHeight = thumbnailObj.optInt("h", 100);
 		}
 
 		new Thread(new Runnable() {
@@ -275,7 +277,7 @@ public class UIMediaScanner extends UZModule {
 				}
 
 				// type
-				if (allScanFileList == null) {
+				//if (allScanFileList == null) {
 					Util util = new Util(getContext());
 					if ("all".equals(type)) {
 						allScanFileList = util.listAlldir(Util.ALL_TYPE);
@@ -286,7 +288,7 @@ public class UIMediaScanner extends UZModule {
 					if ("video".equals(type)) {
 						allScanFileList = util.listAllVideo();
 					}
-				}
+				//}
 
 				// sort
 				JSONObject sortObj = moduleConztext.optJSONObject("sort");
@@ -333,7 +335,7 @@ public class UIMediaScanner extends UZModule {
 						SortUtils.dascSortBySize(allScanFileList);
 					}
 				}
-
+				
 				// count
 				int count = -1;
 				if (!moduleConztext.isNull("count")) {
@@ -354,7 +356,7 @@ public class UIMediaScanner extends UZModule {
 					startIndex = count;
 				}
 				moduleConztext.success(
-						creatRetJSON(null, subList, true, thumbWidth,
+						creatRetJSON("success", subList, true, thumbWidth,
 								thumbHeight), true);
 			}
 		}).start();
@@ -409,7 +411,7 @@ public class UIMediaScanner extends UZModule {
 				}
 
 				moduleConztext.success(
-						creatRetJSON(null, subListFileInfo, false, thumbWidth,
+						creatRetJSON("success", subListFileInfo, false, thumbWidth,
 								thumbHeight), true);
 			}
 		}).start();
@@ -467,6 +469,9 @@ public class UIMediaScanner extends UZModule {
 		if (data == null) {
 			return;
 		}
+		
+		Log.i("LYH", "onActivityResult");
+		
 		@SuppressWarnings("unchecked")
 		ArrayList<FileInfo> filelist = (ArrayList<FileInfo>) data
 				.getSerializableExtra("files");
@@ -502,15 +507,28 @@ public class UIMediaScanner extends UZModule {
 	public String createThumbPath(String orgPath, int width, int height) {
 
 		int degree = BitmapToolkit.readPictureDegree(orgPath);
+		
+		Log.i("TT", "degree : " + degree);
 
-		// Bitmap srcBitmap = BitmapFactory.decodeFile(orgPath);
+		Bitmap createdBitmap = BitmapFactory.decodeFile(orgPath);
 		// if (srcBitmap == null) {
 		// return null;
 		// }
+		
+		if(createdBitmap == null){
+			return null;
+		}
 
-		Bitmap createdBitmap = Util.decodeSampledBitmapFromFile(orgPath, width,
-				height);// ThumbnailUtils.extractThumbnail(srcBitmap, width,
-						// height);
+//		Bitmap createdBitmap = Util.decodeSampledBitmapFromFile(orgPath, width,
+//				height);// ThumbnailUtils.extractThumbnail(srcBitmap, width,height);
+		
+//		if(width >= createdBitmap.getWidth()
+//				|| height >= createdBitmap.getHeight()){
+//			return orgPath;
+//		}
+		
+		createdBitmap = ThumbnailUtils.extractThumbnail(createdBitmap, width,height);
+		
 		if (degree != 0) {
 			createdBitmap = BitmapToolkit.rotaingImageView(degree,
 					createdBitmap);
@@ -532,6 +550,7 @@ public class UIMediaScanner extends UZModule {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
+		
 		return imagePath.getAbsolutePath();
 	}
 
@@ -551,26 +570,29 @@ public class UIMediaScanner extends UZModule {
 				JSONObject obj = new JSONObject();
 				obj.put("path", list.get(i).path);
 
-				if (!TextUtils.isEmpty(list.get(i).thumbImgPath)
-						&& new File(list.get(i).thumbImgPath).exists()) {
-					obj.put("thumbPath", list.get(i).thumbImgPath);
-				} else {
-
+//				if (!TextUtils.isEmpty(list.get(i).thumbImgPath)
+//						&& new File(list.get(i).thumbImgPath).exists()) {
+//					obj.put("thumbPath", list.get(i).thumbImgPath);
+//				} else {
+				{
 					String realPathStr = CACHE_PATH + "/.thumbnails_for_me";
+					
 					File realPath = new File(realPathStr);
-					File imagePath = new File(realPath, Util.stringToMD5(list
-							.get(i).path) + ".jpg");
+					File imagePath = new File(realPath, Util.stringToMD5(list.get(i).path) + ".jpg");
 
 					if (imagePath.exists()) {
+						Log.i("TT", "use cache");
 						obj.put("thumbPath", imagePath.getAbsolutePath());
 					} else {
 						String tmpPath = createThumbPath(list.get(i).path,
 								thumbNailWidth, thumbNailHeight);
+						Log.i("TT", "create image " + thumbNailWidth + " " + thumbNailHeight);
 						if (!TextUtils.isEmpty(tmpPath)) {
 							obj.put("thumbPath", tmpPath);
 						}
 					}
 				}
+//				}
 
 				String mimeType = list.get(i).mimeType;
 
@@ -578,12 +600,16 @@ public class UIMediaScanner extends UZModule {
 				if (mimeType != null && mimeType.startsWith("image")) {
 					suffix = mimeType.replace("image/", "");
 				}
+				
+				
 				if (mimeType != null && mimeType.startsWith("video")) {
 					suffix = mimeType.replace("video/", "");
-
+					
+				
 					if (TextUtils.isEmpty(list.get(i).thumbImgPath)
 							|| !new File(list.get(i).thumbImgPath).exists()) {
-
+						
+						
 						String realPathStr = CACHE_PATH + "/.thumbnails_for_me";
 						File realPath = new File(realPathStr);
 						if (!realPath.exists()) {
@@ -595,11 +621,14 @@ public class UIMediaScanner extends UZModule {
 						if (imagePath.exists()) {
 							obj.put("thumbPath", imagePath);
 						} else {
+							
 							Bitmap videoThumb = Util.createVideoThumbnail(list
 									.get(i).path);
 							Util.saveBitmap(list.get(i).path, videoThumb);
 							obj.put("thumbPath", imagePath);
 						}
+					} else {
+						obj.put("thumbPath", list.get(i).thumbImgPath);
 					}
 				}
 

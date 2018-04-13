@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -44,6 +45,7 @@ import android.widget.ProgressBar;
 /**
  * @author Robot
  */
+@SuppressLint("NewApi")
 public class ImageLoader {
 
 	public static final String TAG = "lyh";
@@ -100,6 +102,7 @@ public class ImageLoader {
 		CACHE_PATH = cachePath;
 	}
 
+	@SuppressLint("NewApi") 
 	private static LruCache<String, Bitmap> caches = new LruCache<String, Bitmap>(
 			MAX_CACHE_SIZE) {
 
@@ -119,6 +122,7 @@ public class ImageLoader {
 	private static ExecutorService mThreadPool = Executors
 			.newFixedThreadPool(THREAD_NUMS);
 
+	@SuppressLint("NewApi") 
 	@SuppressWarnings("deprecation")
 	public void load(View view, final String path) {
 
@@ -142,6 +146,7 @@ public class ImageLoader {
 
 	}
 
+	@SuppressLint("NewApi") 
 	@SuppressWarnings("deprecation")
 	public void load(View view, ProgressBar mProgressbar, final String path) {
 
@@ -165,6 +170,7 @@ public class ImageLoader {
 
 	}
 
+	@SuppressLint("NewApi") 
 	public void load(View view, final String path,
 			OnLoadProgressListener progressListener) {
 
@@ -392,7 +398,7 @@ public class ImageLoader {
 			this.corner = corner;
 		}
 
-		@Override
+		 @Override
 		public void run() {
 
 			// load from disk
@@ -492,7 +498,6 @@ public class ImageLoader {
 	 * @param localFile
 	 * @return
 	 */
-	@SuppressWarnings("deprecation")
 	public Bitmap getSampledBitmap(String localFile) {
 		
 		Log.i(TAG, "=== " + localFile);

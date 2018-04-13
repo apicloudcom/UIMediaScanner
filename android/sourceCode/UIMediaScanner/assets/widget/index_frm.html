@@ -1,0 +1,171 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, initial-scale=1.0, width=device-width"/>
+    <meta name="format-detection" content="telephone=no, email=no, date=no, address=no">
+    <title>WinA</title>
+    <link rel="stylesheet" type="text/css" href="css/api.css" />
+    <link rel="stylesheet" type="text/css" href="css/box.css" />
+    <script type="text/javascript" src="script/public.js"></script>
+    <style>
+    	p{
+    		color:#999;
+    		padding:5px;
+    	}
+    </style>
+	<script type="text/javascript">
+	    
+		var uzmoduledemo = null;
+		var scrollPicture = null;
+		apiready = function(){
+	    	uzmoduledemo = api.require('moduleDemo');
+	    	scrollPicture = api.require('scrollPicture');
+	    }
+	    
+		function showAlert(){
+			var param = {msg:"Hello APICloud!"};
+	        uzmoduledemo.showAlert(param, function(ret, err){
+	        	alert(JSON.stringify(ret));
+	        });
+		}
+		
+		function startActivity(){
+			var param = {appParam:"Hello APICloud!"};
+	        uzmoduledemo.startActivity(param);
+		}
+		
+		function startActivityForResult(){
+			var param = {appParam:"Hello APICloud!"};
+			var resultCallback = function(ret, err){
+				document.getElementById("activity_result").innerHTML = JSON.stringify(ret);
+			}
+	        uzmoduledemo.startActivityForResult(param, resultCallback);
+		}
+		
+		function vibrate(){
+			var mill = document.getElementById("vibrate").value;
+			var param = {milliseconds:mill};
+	        uzmoduledemo.vibrate(param);
+		}
+		
+		function stopVibrate(){
+	        uzmoduledemo.stopVibrate();
+		}
+		
+		function addView(){
+			var param = {x:20,y:20,w:200,h:200};
+	        uzmoduledemo.addView(param);
+		}
+		
+		function removeView(){
+		
+	        uzmoduledemo.removeView();
+		}
+
+		function testopen(){
+			var sw = document.getElementById("sw").value;
+			scrollPicture.open({
+				x:0,
+				y:30,
+				w:sw,
+				h:200,
+				fixedOn:'index_frm', //固定在名为'index_frm'的frame上
+				//fixed:false //跟随网页滚动
+			}, function(ret, err){
+				alert(JSON.stringify(ret));
+			});
+		}
+		
+		function testclose(){
+			scrollPicture.close();
+		}
+		
+		function toRefrash(){
+			api.refreshHeaderLoading();
+		}
+		
+		function stopRefrash(){
+			api.refreshHeaderLoadDone();
+		}
+		
+		function setRefrashHeader(){
+			api.setCustomRefreshHeaderInfo({
+			    arrowImage: 'widget://image/refresh.png'
+			}, function( ret, err ){
+			    ;
+			});
+			alert('设置成功，再进入下拉刷新状态看看图片是否变啦！');
+		}
+		
+		var sModule = null;
+		
+		function syncInterface(what){
+			if(!sModule){
+				sModule = api.require('syncModule');
+			}
+			var ret = null;
+			if(0 == what){
+				ret = sModule.int();
+			}else if(1 == what){
+				ret = sModule.float();
+			}else if(2 == what){
+				ret = sModule.boolean();
+			}else if(3 == what){
+				ret = sModule.string();
+			}else if(4 == what){
+				ret = sModule.json();
+			}else if(5 == what){
+				ret = sModule.jsonay();
+			}else{
+				return;
+			}
+			if(typeof ret === 'object'){
+				alert("获取结果为对象！\n结果：" + JSON.stringify(ret));
+			}else{
+				alert("获取结果为基本数据!\n结果：" + ret);
+			}
+		}
+	    
+	</script>
+</head>
+<body>
+    <div id="wrap">
+        <div id="main">
+        	<br>
+			<div class='itemtitle'>1、弹出对话框</div>
+				<div class="clickbtn" tapmode="active" onclick="showAlert()" >点击弹出</div>     
+			<div class='itemtitle'>2、启动Activity</div>
+				<div class="clickbtn" tapmode="active" onclick="startActivity()" >startActivity</div>
+				<div class="clickbtn" tapmode="active" onclick="startActivityForResult()" >startActivityForResult</div>
+				<div style="font-size:0.8em;">acticity返回值:</div>
+            	<div id="activity_result" style="width:100%;word-wrap: break-word;word-break: normal;"></div><br><br>
+			<div class='itemtitle'>3、调用设备震动</div>
+				<lable>设置震动时间，单位：毫秒</lable><br>
+				<input type="number" id="vibrate" value="20000" />
+				<div class="clickbtn" tapmode="active" onclick="vibrate()" >开始震动</div>
+				<div class="clickbtn" tapmode="active" onclick="stopVibrate()" >停止震动</div>
+			<div class='itemtitle'>4、自定义UI模块</div>
+				<div class="clickbtn" tapmode="active" onclick="addView()" >添加自定义View到当前Window</div> 
+				<div class="clickbtn" tapmode="active" onclick="removeView()" >从当前Window移除自定义View</div>     
+			<div class='itemtitle'>5、简单ScrollPicture模块</div>
+				<lable>输入ScrollPicture的宽度</lable><br>
+				<input type="number" id="sw" value="300"/>
+				<div class="clickbtn" tapmode="active" onclick="testopen()" >打开ScrollPicture</div>
+				<div class="clickbtn" tapmode="active" onclick="testclose()" >移除ScrollPicture</div>
+			<div class='itemtitle'>6、自定义简单的下拉刷新模块</div>
+				<div class="clickbtn" tapmode="active" onclick="toRefrash()" >直接进入下拉刷新</div>
+				<div class="clickbtn" tapmode="active" onclick="stopRefrash()" >退出下拉刷新</div> 
+				<div class="clickbtn" tapmode="active" onclick="setRefrashHeader()" >设置自定义下拉刷新模块</div>   
+			<div class='itemtitle'>7、同步接口</div>
+				<div class="clickbtn" tapmode="active" onclick="syncInterface(0)" >同步获取整数</div>
+				<div class="clickbtn" tapmode="active" onclick="syncInterface(1)" >同步获取小数</div>
+				<div class="clickbtn" tapmode="active" onclick="syncInterface(2)" >同步获取bool值</div>  
+				<div class="clickbtn" tapmode="active" onclick="syncInterface(3)" >同步获取字符串</div> 
+				<div class="clickbtn" tapmode="active" onclick="syncInterface(4)" >同步获取JSON对象</div>
+				<div class="clickbtn" tapmode="active" onclick="syncInterface(5)" >同步获取JSON数组对象</div>  
+			<br>
+		</div>
+	</div>
+</body>
+</html>

@@ -9,7 +9,6 @@ package com.uzmap.pkg.uzmodules.UIMediaScanner;
 import java.util.ArrayList;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
@@ -34,17 +33,23 @@ public class PhotoBrowser extends Activity {
 				.getResLayoutID("meidascanner_photobrowser_main_layout"));
 		mLoader = new ImageLoader(this, getCacheDir().getAbsolutePath());
 		mImgPaths = getIntent().getStringArrayListExtra("imgPaths");
-		open();
+		String selectedPath = getIntent().getStringExtra("selectedPath");
+		
+		int selectedIndex = 0;
+		if(mImgPaths != null){
+			selectedIndex = mImgPaths.indexOf(selectedPath);
+		}
+		open(selectedIndex);
 	}
 
-	public void open() {
+	public void open(int selectedIndex) {
 		int browserPagerId = UZResourcesIDFinder.getResIdID("browserPager");
 		mBrowserPager = (HackyViewPager) findViewById(browserPagerId);
 		mBrowserPager.setBackgroundColor(Color.BLACK);
 		mAdapter = new ImageBrowserAdapter(this, null, mImgPaths, mLoader);
 		mBrowserPager.setAdapter(mAdapter);
 		mAdapter.setZoomEnable(true);
-		mBrowserPager.setCurrentItem(0);
+		mBrowserPager.setCurrentItem(selectedIndex);
 		findViewById(UZResourcesIDFinder.getResIdID("back"))
 				.setOnClickListener(new OnClickListener() {
 
@@ -80,7 +85,6 @@ public class PhotoBrowser extends Activity {
 
 	public void clearCache(UZModuleContext uzContext) {
 		if (mLoader != null) {
-
 			new Thread(new Runnable() {
 				@Override
 				public void run() {

@@ -16,8 +16,8 @@
     </style>
 	<script type="text/javascript">
 	    apiready = function(){
-			fixStatusBar();
-			openContent('main-con.html', 'index_frm');
+			fixStatusBar();//沉浸式效果，支持IOS7及Android4.4及以上
+			openContent('index_frm.html', 'index_frm');//打开主frame
 			$('year').innerHTML = new Date().getFullYear();
 	    };
 	</script>
@@ -25,7 +25,7 @@
 <body>
     <div id="wrap">
         <div id='header'>
-            <h1>濡�虫健瀵拷閸欐垵鐤勬笟锟�</h1>
+            <h1>模块开发实例</h1>
         </div>
         <div id="main"></div>
         <div id="footer">

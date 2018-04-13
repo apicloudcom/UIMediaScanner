@@ -81,4 +81,32 @@ public class BitmapToolkit {
 		Bitmap resizedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height);
 		return resizedBitmap;
 	}
+	
+	
+	public static void setPictureDegreeZero(String path, int degree) {
+		try {
+			ExifInterface exifInterface = new ExifInterface(path);
+			// 修正图片的旋转角度，设置其不旋转。这里也可以设置其旋转的角度，可以传值过去，
+			// 例如旋转90度，传值ExifInterface.ORIENTATION_ROTATE_90，需要将这个值转换为String类型的
+			switch (degree) {
+			case 90:
+				exifInterface.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90 + "");
+				break;
+			case 180:
+				exifInterface.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_180 + "");
+				break;
+			case 270:
+				exifInterface.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_270 + "");
+				break;
+			default:
+				exifInterface.setAttribute(ExifInterface.TAG_ORIENTATION, "no");
+				break;
+			}
+			exifInterface.saveAttributes();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
 }

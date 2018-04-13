@@ -140,24 +140,23 @@ public class UzImgFileListAdapter extends BaseAdapter {
 
 	public Bitmap getPathBitmap(Uri imageFilePath, int dw, int dh) throws FileNotFoundException {
 
-		BitmapFactory.Options op = new BitmapFactory.Options();
-		op.inJustDecodeBounds = true;
+		Bitmap pic = BitmapFactory.decodeStream(mContext.getContentResolver().openInputStream(imageFilePath));
+//
+//		int wRatio = (int) Math.ceil(op.outWidth / (float) dw);
+//		int hRatio = (int) Math.ceil(op.outHeight / (float) dh);
+//
+//		if (wRatio > 1 && hRatio > 1) {
+//			if (wRatio > hRatio) {
+//				op.inSampleSize = wRatio;
+//			} else {
+//				op.inSampleSize = hRatio;
+//			}
+//		}
+//		op.inJustDecodeBounds = false;
+//		pic = BitmapFactory.decodeStream(mContext.getContentResolver().openInputStream(imageFilePath), null, op);
 
-		Bitmap pic = BitmapFactory.decodeStream(mContext.getContentResolver().openInputStream(imageFilePath), null, op);
-
-		int wRatio = (int) Math.ceil(op.outWidth / (float) dw);
-		int hRatio = (int) Math.ceil(op.outHeight / (float) dh);
-
-		if (wRatio > 1 && hRatio > 1) {
-			if (wRatio > hRatio) {
-				op.inSampleSize = wRatio;
-			} else {
-				op.inSampleSize = hRatio;
-			}
-		}
-		op.inJustDecodeBounds = false;
-		pic = BitmapFactory.decodeStream(mContext.getContentResolver().openInputStream(imageFilePath), null, op);
-
+		pic = ThumbnailUtils.extractThumbnail(pic, dw, dh);
+		
 		return pic;
 	}
 	

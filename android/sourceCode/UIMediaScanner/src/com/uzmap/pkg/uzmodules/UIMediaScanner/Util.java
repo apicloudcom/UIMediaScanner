@@ -178,11 +178,8 @@ public class Util {
 				allThumbnailMap.put(image_id, thumbInfo);
 
 			} while (cur.moveToNext());
-
 		}
-
 		return allThumbnailMap;
-
 	}
 
 	public static final String SDCARD_PATH = Environment
@@ -256,11 +253,8 @@ public class Util {
 				int imgId = cursor.getInt(3);
 				String groupName = cursor.getString(5);
 				if(!groups.contains(groupName)){
-					System.out.println(groupName);
+	//				System.out.println(groupName);
 					groups.add(groupName);
-				}
-				if(groupName.equals("find")||groupName.equals("0")){
-					System.out.println(path);
 				}
 				FileInfo info = new FileInfo();
 				info.path = new File(path).getAbsolutePath();
@@ -347,25 +341,29 @@ public class Util {
 
 	public Bitmap getPathBitmap(Uri imageFilePath, int dw, int dh)
 			throws FileNotFoundException {
+		
+		Bitmap pic = BitmapFactory.decodeStream(mContext.getContentResolver().openInputStream(imageFilePath));
+		pic = ThumbnailUtils.extractThumbnail(pic, dw, dh);
 
-		BitmapFactory.Options op = new BitmapFactory.Options();
-		op.inJustDecodeBounds = true;
-		Bitmap pic = BitmapFactory.decodeStream(mContext.getContentResolver()
-				.openInputStream(imageFilePath), null, op);
-
-		int wRatio = (int) Math.ceil(op.outWidth / (float) dw);
-		int hRatio = (int) Math.ceil(op.outHeight / (float) dh);
-
-		if (wRatio > 1 && hRatio > 1) {
-			if (wRatio > hRatio) {
-				op.inSampleSize = wRatio;
-			} else {
-				op.inSampleSize = hRatio;
-			}
-		}
-		op.inJustDecodeBounds = false;
-		pic = BitmapFactory.decodeStream(mContext.getContentResolver()
-				.openInputStream(imageFilePath), null, op);
+//		BitmapFactory.Options op = new BitmapFactory.Options();
+//		op.inJustDecodeBounds = true;
+//		Bitmap pic = BitmapFactory.decodeStream(mContext.getContentResolver()
+//				.openInputStream(imageFilePath), null, op);
+//
+//		int wRatio = (int) Math.ceil(op.outWidth / (float) dw);
+//		int hRatio = (int) Math.ceil(op.outHeight / (float) dh);
+//
+//		if (wRatio > 1 && hRatio > 1) {
+//			if (wRatio > hRatio) {
+//				op.inSampleSize = wRatio;
+//			} else {
+//				op.inSampleSize = hRatio;
+//			}
+//		}
+//		op.inJustDecodeBounds = false;
+//		pic = BitmapFactory.decodeStream(mContext.getContentResolver()
+//				.openInputStream(imageFilePath), null, op);
+		
 		return pic;
 	}
 
@@ -547,7 +545,7 @@ public class Util {
 	}
 
 	/**
-	 * 将字符串转成MD5�?
+	 * 将字符串转成MD5�?
 	 * 
 	 * @param string
 	 * @return
@@ -579,5 +577,4 @@ public class Util {
 		}
 		return hex.toString();
 	}
-
 }

@@ -19,6 +19,10 @@ public class ConfigInfo implements Serializable {
 	
 	public boolean rotation = false;
 	
+	public String selectedMaxText = "最多显示*个资源";
+	
+	public String clasifyTitle = "相簿";
+	
 	/**
 	 * base style setting
 	 */

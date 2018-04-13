@@ -64,11 +64,11 @@ public class UzImgFileListActivity extends BaseActivity implements OnItemClickLi
 		
 		findViewById(UZResourcesIDFinder.getResIdID("relativeLayout1")).setBackgroundColor(0xFF3D3D3D);
 		TextView naviTitle = (TextView) findViewById(UZResourcesIDFinder.getResIdID("navi_title"));
-		naviTitle.setText("照片");
+		naviTitle.setText(mConfig.clasifyTitle);
 		naviTitle.setTextSize(22);
 		
 		TextView cancelTxt = (TextView) findViewById(UZResourcesIDFinder.getResIdID("button2"));
-		cancelTxt.setText("取消");
+		cancelTxt.setText(mConfig.cancel_title);
 		cancelTxt.setTextSize(20);
 
 		if (mLocallist != null) {
@@ -124,9 +124,8 @@ public class UzImgFileListActivity extends BaseActivity implements OnItemClickLi
 		intent.putExtras(bundle);
 		intent.putExtra(UIMediaScanner.CONFIG_TAG, mConfig);
 		startActivityForResult(intent, REQUEST_CODE);
-		
 	}
-
+	
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();

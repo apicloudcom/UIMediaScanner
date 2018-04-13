@@ -546,7 +546,14 @@
 - (BOOL)max:(NSArray *)indexPaths {
     NSInteger selectedMax = [self.paramsDict integerValueForKey:@"max" defaultValue:-1];
     if ((indexPaths.count+1) > selectedMax){
-        UIAlertView *alertView = [[UIAlertView alloc]initWithTitle:nil message:[NSString stringWithFormat:@"你最多只能选择%ld个资源",(unsigned long)selectedMax] delegate:self cancelButtonTitle:@"我知道了" otherButtonTitles: nil];
+        NSDictionary *stateInfo = [self.paramsDict dictValueForKey:@"texts" defaultValue:@{}];
+        NSString *selectedMaxText = [stateInfo stringValueForKey:@"selectedMaxText" defaultValue:@"最多显示*个资源"];
+        NSRange range = [selectedMaxText rangeOfString:@"*"];
+        if (range.length != NSNotFound) {
+            selectedMaxText = [selectedMaxText stringByReplacingOccurrencesOfString:@"*" withString:[NSString stringWithFormat:@"%ld",(unsigned long)selectedMax]];
+        }
+        NSString *okBtnText = [stateInfo stringValueForKey:@"okBtnText" defaultValue:@"我知道了"];
+        UIAlertView *alertView = [[UIAlertView alloc]initWithTitle:nil message:selectedMaxText delegate:self cancelButtonTitle:okBtnText otherButtonTitles: nil];
         [alertView show];
         return false;
     } else {

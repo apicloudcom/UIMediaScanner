@@ -19,10 +19,10 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"相薄";
+    self.title = self.titleStr;
     UIButton *cancelBtn = [[UIButton alloc]initWithFrame:CGRectMake(0, 0, 50, 30)];
     cancelBtn.backgroundColor = [UIColor clearColor];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"取消" style:UIBarButtonItemStylePlain target:self action:@selector(cancelBack)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:self.cancelBtnTitle style:UIBarButtonItemStylePlain target:self action:@selector(cancelBack)];
     if (!self.assetsLibrary) {
         self.assetsLibrary = [self.class defaultAssetsLibrary];
     }

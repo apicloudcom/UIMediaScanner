@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, initial-scale=1.0, width=device-width"/>
+    <meta name="format-detection" content="telephone=no, email=no, date=no, address=no">
+    <title>WinA</title>
+    <link rel="stylesheet" type="text/css" href="css/api.css" />
+    <link rel="stylesheet" type="text/css" href="css/box.css" />
+    <script type="text/javascript" src="script/public.js"></script>
+    <style>
+    	p{
+    		color:#999;
+    		padding:5px;
+    	}
+    </style>
+		
+    </head>
+    <body>
+    
+    </body>
+    <script type='text/javascript'>
+    
+    var tn;
+    function login(){
+	    var cnPay = api.require('constructionPay');
+		cnPay.getTn({
+			goodsId:'10001',
+			bankId: "999",
+			serverUrl: "http://218.30.21.104/ezfmp_demo/payment.action"
+	    }, function(ret){
+		   api.alert({msg:JSON.stringify(ret)});
+		   tn = ret.tn;
+		   pay();
+	    });
+    }
+    
+    function pay(){
+	   var cnPay = api.require('constructionPay');
+		cnPay.pay({
+			tn: tn,
+			mode: '01'
+		}, function(ret){
+		   api.alert({msg:JSON.stringify(ret)});
+		});
+    }
+    
+    function scan(){
+	  var UIMediaScanner = api.require('UIMediaScanner');
+		UIMediaScanner.scan({
+			type: 'all',
+			count: 6,
+			sort: {
+				key: 'time',
+				order: 'desc'
+			},
+			thumbnail: {
+				w: 300,
+				h: 300
+			}
+		}, function(ret) {
+			if (ret) {
+		       alert(ret.list[0].thumbPath);
+		       document.getElementById('thumbImg').src=ret.list[0].thumbPath;
+		       document.getElementById('thumbImg1').src=ret.list[1].thumbPath;
+		       document.getElementById('thumbImg2').src=ret.list[2].thumbPath;
+		       document.getElementById('thumbImg3').src=ret.list[3].thumbPath;
+		       document.getElementById('thumbImg4').src=ret.list[4].thumbPath;
+		       document.getElementById('thumbImg5').src=ret.list[5].thumbPath;
+		       document.getElementById('thumbImg6').src=ret.list[6].thumbPath;
+		       document.getElementById('thumbImg7').src=ret.list[7].thumbPath;
+		    }
+		});
+    }
+    
+    function openPitcutres(){
+    	var UIMediaScanner = api.require('UIMediaScanner');
+		UIMediaScanner.open({
+		    type: 'all',
+		    column: 4,
+		    classify: true,
+		    max: 4,
+		    sort: {
+		        key: 'time',
+		        order: 'desc'
+		    },
+		    texts: {
+		        stateText: '*',
+		        cancelText: '取消',
+		        finishText: '结束'
+		    },
+		    styles: {
+		        bg: '#fff',
+		        mark: {
+		            icon: '',
+		            position: 'bottom_right',
+		            size: 20
+		        },
+		        nav: {
+		            bg: '#eee',
+		            stateColor: '#000',
+		            stateSize: 18,
+		            cancelBg: 'rgba(0,0,0,0)',
+		            cancelColor: '#000',
+		            cancelSize: 18,
+		            finishBg: 'rgba(0,0,0,0)',
+		            finishColor: '#000',
+		            finishSize: 18
+		        }
+		    },
+		    exchange: true,
+		    rotation: true,
+		    showPreview:false,
+		    showBrowser:false
+		}, function(ret) {
+		    if (ret) {
+		       alert(JSON.stringify(ret));
+		       document.getElementById('thumbImg').src=ret.list[0].thumbPath;
+		       document.getElementById('thumbImg1').src=ret.list[1].thumbPath;
+		       document.getElementById('thumbImg2').src=ret.list[2].thumbPath;
+		       document.getElementById('thumbImg3').src=ret.list[3].thumbPath;
+		       document.getElementById('thumbImg4').src=ret.list[4].thumbPath;
+		       document.getElementById('thumbImg5').src=ret.list[5].thumbPath;
+		       document.getElementById('thumbImg6').src=ret.list[6].thumbPath;
+		       document.getElementById('thumbImg7').src=ret.list[7].thumbPath;
+		    }
+		});
+    }
+    
+    </script>
+    
+   <body>
+    <div id="wrap">
+        <div id="main">
+        	<br>
+			<div class="clickbtn" tapmode="active" onclick="scan()" >scan</div> 
+			<div class="clickbtn" tapmode="active" onclick="openPitcutres()" >openPitcutres</div> 
+		</div>
+	</div>
+	
+	<img id="thumbImg"/>
+	<img id="thumbImg1"/>
+	<img id="thumbImg2"/>
+	<img id="thumbImg3"/>
+	<img id="thumbImg4"/>
+	<img id="thumbImg5"/>
+	<img id="thumbImg6"/>
+	<img id="thumbImg7"/>
+</body>
+    
+</html>

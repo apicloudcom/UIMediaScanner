@@ -29,7 +29,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
-
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.CheckBox;
@@ -56,6 +56,7 @@ public class UzImgsActivity extends BaseActivity {
 	private String mReplaceTxt;
 	private int mScreenWidth;
 	private Bitmap mSelectedIconBmp;
+	
 
 	private UzImgCallBack imgCallBack = new UzImgCallBack() {
 		public void resultImgCall(ImageView imageView, Bitmap bitmap) {
@@ -110,6 +111,8 @@ public class UzImgsActivity extends BaseActivity {
 			}
 		}
 	};
+	
+	private boolean proxyShowPreview = false;
 
 	@SuppressWarnings("deprecation")
 	@SuppressLint({ "UseSparseArrays" })
@@ -121,6 +124,17 @@ public class UzImgsActivity extends BaseActivity {
 		boolean hasData = mBundle.getBoolean(UzImgFileListActivity.TRANS_TAG);
 		this.mConfig = ((ConfigInfo) getIntent().getSerializableExtra(
 				"configData"));
+		
+		if(mConfig.showBrowser || mConfig.showPreview){
+			mConfig.mark_position = "top_right";
+		}
+		
+		proxyShowPreview = mConfig.showPreview;
+		
+		if(mConfig.showBrowser && !mConfig.showPreview){
+			mConfig.showPreview = true;
+			proxyShowPreview = false;
+		}
 
 		if (hasData && UzImgFileListActivity.fileTraversal != null) {
 			this.mAllImgList = UzImgFileListActivity.fileTraversal.fileInfos;
@@ -201,26 +215,42 @@ public class UzImgsActivity extends BaseActivity {
 				.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 					public void onItemClick(AdapterView<?> arg0, View arg1,
 							int position, long arg3) {
+						
+						FileInfo fileInfo = (FileInfo) UzImgsActivity.this.mAllImgList.get(position);
+						
+						if (mConfig.showBrowser && fileInfo.isChecked) {
+							
+							ArrayList<String> imgPaths = imgPaths();
+							Intent intent = new Intent(
+									UzImgsActivity.this,
+									PhotoBrowser.class);
+							
+							if(imgPaths == null){
+								ArrayList<String> paths = new ArrayList<String>();
+								paths.add(fileInfo.path);
+								intent.putStringArrayListExtra("imgPaths",
+										paths);
+							} else {
+								intent.putStringArrayListExtra("imgPaths",
+										imgPaths);
+							}
+							intent.putExtra("selectedPath", fileInfo.path);
+							
+							startActivityForResult(intent, 0);
+						}
+						
 						if (mConfig.showPreview) {
-							FileInfo fileInfo = (FileInfo) UzImgsActivity.this.mAllImgList
-									.get(position);
 							if (fileInfo.isChecked) {
-								previewCallBack();
-								if (mConfig.showBrowser) {
-									ArrayList<String> imgPaths = imgPaths();
-									Intent intent = new Intent(
-											UzImgsActivity.this,
-											PhotoBrowser.class);
-									intent.putStringArrayListExtra("imgPaths",
-											imgPaths);
-									startActivityForResult(intent, 0);
+								if(proxyShowPreview){
+									previewCallBack();
 								}
 							}
 						} else {
-							onItemClickEvent(position);
+							onItemClickEvent(position, (Holder)arg1.getTag());
 						}
 					}
 				});
+		
 		this.mImgsAdapter.setBitmap(this.mSelectedIconBmp);
 
 		this.mLayout = ((RelativeLayout) findViewById(UZResourcesIDFinder
@@ -230,6 +260,8 @@ public class UzImgsActivity extends BaseActivity {
 		this.mUtil = new Util(this);
 
 		if (this.mConfig != null) {
+			
+			
 			this.mImgGridView.setNumColumns(this.mConfig.col);
 			this.mImgGridView.setBackgroundColor(this.mConfig.bgColor);
 
@@ -237,6 +269,8 @@ public class UzImgsActivity extends BaseActivity {
 			this.mImgsAdapter.setMarkPosition(this.mConfig.mark_position);
 			this.mImgsAdapter.setShowPreview(this.mConfig.showPreview);
 			this.mImgsAdapter.notifyDataSetChanged();
+			
+			
 
 			this.mImgsAdapter.setMarkSize(this.mConfig.mark_size);
 
@@ -339,9 +373,11 @@ public class UzImgsActivity extends BaseActivity {
 		super.onCreate(savedInstanceState);
 	}
 
-	public void onItemClickEvent(int position) {
-		Holder holder = (Holder) ((View) UzImgsActivity.this.mImgsAdapter
-				.getHolderlist().get(position)).getTag();
+	public void onItemClickEvent(int position, Holder holder) {
+//		Holder holder = (Holder) ((View) UzImgsActivity.this.mImgsAdapter
+//				.getHolderlist().get(position)).getTag();
+		
+		Log.i("debug", "onItemClickEvent");
 
 		FileInfo fileInfo = (FileInfo) UzImgsActivity.this.mAllImgList
 				.get(position);
@@ -353,13 +389,16 @@ public class UzImgsActivity extends BaseActivity {
 			}
 		}
 
-		if (holder.itemCheckBox.isChecked()) {
+		if (mFilelist.contains(fileInfo)) {
 			holder.itemCheckBox.setChecked(false);
 			if (mConfig.showPreview) {
 				holder.itemSelectedImage.setImageResource(UZResourcesIDFinder
 						.getResDrawableID("mo_media_scanner_select"));
 			}
 			UzImgsActivity.this.mFilelist.remove(fileInfo);
+			
+			Log.i("debug", "unselected");
+			
 		} else {
 			if (mConfig.showPreview) {
 				holder.itemSelectedImage.setImageResource(UZResourcesIDFinder
@@ -367,23 +406,28 @@ public class UzImgsActivity extends BaseActivity {
 			}
 			try {
 				if (mFilelist.size() < mConfig.selectedMax) {
+					
+					
+					Log.i("debug", "selected");
+					
 					holder.itemCheckBox.setChecked(true);
-					ImageView imageView = UzImgsActivity.this.iconImage(
-							fileInfo, position, holder.itemCheckBox);
-					if (imageView != null) {
-
-						UzImgsActivity.this.mHashImages.put(
-								Integer.valueOf(position), imageView);
-						UzImgsActivity.this.mFilelist.add(fileInfo);
-
-					}
+					UzImgsActivity.this.mFilelist.add(fileInfo);
+					
+//					ImageView imageView = UzImgsActivity.this.iconImage(
+//							fileInfo, position, holder.itemCheckBox);
+//					if (imageView != null) {
+//
+//						UzImgsActivity.this.mHashImages.put(
+//								Integer.valueOf(position), imageView);
+//					}
+					
 				} else {
 					Toast.makeText(UzImgsActivity.this,
-							"你最多只能选择" + mFilelist.size() + "个资源",
+							mConfig.selectedMaxText.replace("*", mFilelist.size()+""),
 							Toast.LENGTH_LONG).show();
 					return;
 				}
-			} catch (FileNotFoundException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
@@ -431,6 +475,8 @@ public class UzImgsActivity extends BaseActivity {
 		imageView.setOnClickListener(new ImgOnclick(fileInfo, checkBox));
 		return imageView;
 	}
+	
+	
 
 	public void tobreak(View view) {
 		Intent intent = new Intent();
@@ -601,8 +647,7 @@ public class UzImgsActivity extends BaseActivity {
 	}
 
 	@SuppressLint("SimpleDateFormat")
-	private SimpleDateFormat dataFormat = new SimpleDateFormat(
-			"yyyy-MM-dd HH:mm:ss");
+	private SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	public String createThumbPath(String orgPath, int width, int height) {
 
